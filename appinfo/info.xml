@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>watcha</id>
+    <name>Watcha</name>
+    <summary>Watcha connector</summary>
+    <description><![CDATA[This connector allows the integration of document, calendar, task and poll sharing features from Nextcloud into Watcha. It is thus possible to link these resources with Watcha rooms through Nextcloud groups.]]></description>
+    <version>0.0.1</version>
+    <licence>agpl</licence>
+    <author mail="c-cal@watcha.fr" homepage="https://watcha.fr">Charlie Calendre</author>
+    <namespace>Watcha</namespace>
+    <category>integration</category>
+    <bugs>https://github.com/watcha-fr/nextcloud-watcha-connector/issues</bugs>
+    <dependencies>
+        <nextcloud min-version="20" max-version="21"/>
+    </dependencies>
+    <navigations>
+        <navigation>
+            <name>Watcha</name>
+            <route>watcha.page.index</route>
+        </navigation>
+    </navigations>
+</info>

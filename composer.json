@@ -1,0 +1,15 @@
+{
+    "name": "Watcha",
+    "description": "Watcha connector",
+    "type": "project",
+    "license": "AGPL",
+    "authors": [
+        {
+            "name": "Charlie Calendre"
+        }
+    ],
+    "require": {},
+    "require-dev": {
+        "phpunit/phpunit": "^5.4"
+    }
+}

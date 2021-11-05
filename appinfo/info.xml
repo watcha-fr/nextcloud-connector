@@ -1,23 +1,25 @@
 <?xml version="1.0"?>
-<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance"
-      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
     <id>watcha</id>
     <name>Watcha</name>
-    <summary>Watcha connector</summary>
-    <description><![CDATA[This connector allows the integration of document, calendar, task and poll sharing features from Nextcloud into Watcha. It is thus possible to link these resources with Watcha rooms through Nextcloud groups.]]></description>
-    <version>0.0.1</version>
+    <summary lang="en">Watcha connector</summary>
+    <summary lang="fr">Connecteur Watcha</summary>
+    <description lang="en">This connector allows the integration of the document sharing, calendars and tasks features of Nextcloud in [Watcha](https://watcha.fr). It is thus possible to link the resources of these applications to Watcha rooms thanks to Nextcloud groups.</description>
+    <description lang="fr">Ce connecteur permet l'intégration des fonctionnalités de partage de documents, de calendriers et de tâches de Nextcloud dans [Watcha](https://watcha.fr). Il est ainsi possible de lier les ressources de ces application aux salons Watcha grâce aux groupes Nextcloud.</description>
+    <version>0.1.0</version>
     <licence>agpl</licence>
-    <author mail="c-cal@watcha.fr" homepage="https://watcha.fr">Charlie Calendre</author>
+    <author homepage="https://github.com/watcha-fr">Charlie Calendre</author>
     <namespace>Watcha</namespace>
     <category>integration</category>
-    <bugs>https://github.com/watcha-fr/nextcloud-watcha-connector/issues</bugs>
+
+    <website>https://watcha.fr</website>
+    <discussion>https://watcha.fr/#Contactez-nous</discussion>
+    <bugs>https://github.com/watcha-fr/nextcloud-connector/issues</bugs>
+    <repository>https://github.com/watcha-fr/nextcloud-connector</repository>
+    <screenshot small-thumbnail="https://raw.githubusercontent.com/watcha.fr/nextcloud-connector/master/screenshots/watcha1-thumbnail.png">https://raw.githubusercontent.com/watcha.fr/nextcloud-connector/master/screenshots/watcha1.png</screenshot>
+    <screenshot small-thumbnail="https://raw.githubusercontent.com/watcha.fr/nextcloud-connector/master/screenshots/watcha2-thumbnail.png">https://raw.githubusercontent.com/watcha.fr/nextcloud-connector/master/screenshots/watcha2.png</screenshot>
+
     <dependencies>
         <nextcloud min-version="20" max-version="21"/>
     </dependencies>
-    <navigations>
-        <navigation>
-            <name>Watcha</name>
-            <route>watcha.page.index</route>
-        </navigation>
-    </navigations>
 </info>

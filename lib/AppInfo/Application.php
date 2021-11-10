@@ -30,8 +30,10 @@ use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
+use OCP\Security\CSP\AddContentSecurityPolicyEvent;
 use OCP\Util;
 
+use OCA\Watcha\Listener\AddContentSecurityPolicyListener;
 use OCA\Watcha\Middleware\SecurityMiddleware;
 
 /**
@@ -42,7 +44,7 @@ use OCA\Watcha\Middleware\SecurityMiddleware;
 class Application extends App implements IBootstrap {
 
     /** @var string */
-    public const APP_ID = 'watcha';
+    public const APP_ID = "watcha";
 
     /**
      * @param array $params
@@ -58,11 +60,17 @@ class Application extends App implements IBootstrap {
      */
     public function register(IRegistrationContext $context): void {
         $context->registerMiddleware(SecurityMiddleware::class);
+		$context->registerEventListener(AddContentSecurityPolicyEvent::class, AddContentSecurityPolicyListener::class);
     }
 
     /**
      * @inheritDoc
      */
     public function boot(IBootContext $context): void {
+        $this->registerHooks();
+    }
+
+    private function registerHooks(): void {
+        Util::connectHook("\OCP\Config", "js", "\OCA\Watcha\App", "extendJsConfig");
     }
 }

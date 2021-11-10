@@ -22,43 +22,81 @@
 
 "use strict";
 
-window.addEventListener("DOMContentLoaded", () => {
-    if (isIframe()) {
-        loop();
+function refine() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("watcha_widget") || window.name === "watcha") {
+        window.name = "watcha";
+        refineWidget();
     }
-});
-
-function isIframe() {
-    return window.location !== window.parent.location;
+    if (params.has("watcha_doc-selector")) {
+        refineDocumentSelector();
+    }
 }
 
-// bypass third-party DOM changes on load
-function loop(n = 10) {
-    refineIframe();
-    setTimeout(() => {
-        if (--n) {
-            loop(n);
+function refineWidget() {
+    const style = `
+        #header,
+        #filelist-header {
+            display: none !important;
         }
+
+        #body-user {
+            height: 100% !important;
+        }
+
+        #content,
+        #content-vue {
+            padding-top: 0 !important;
+        }
+
+        #app-navigation,
+        #app-navigation-vue,
+        #controls,
+        .header {
+            top: 0 !important;
+        }
+
+        #filestable > thead {
+            top: 44px !important;
+        }`;
+    insertStyle(style);
+}
+
+function refineDocumentSelector() {
+    const style = `
+        .app-sidebar,
+        #app-sidebar,
+        #view-toggle,
+        #headerSelection,
+        #headerSize,
+        .selection,
+        .fileactions,
+        .filesize {
+            display: none !important;
+        }
+        
+        #app-content {
+            transform: none !important;
+        }`;
+    insertStyle(style);
+}
+
+function insertStyle(style) {
+    let element = document.createElement("style");
+    element.innerHTML = style;
+    document.head.appendChild(element);
+}
+
+function postUrl(prevUrl) {
+    const url = window.location.href;
+    if (prevUrl && url !== prevUrl) {
+        window.parent.postMessage(url, OC.appConfig.watcha?.origin || "");
+    }
+    // HACK: to detect URLSearchParams changes that do not trigger a page reload
+    setTimeout(() => {
+        postUrl(url);
     }, 200);
 }
 
-function refineIframe() {
-    const items = [
-        { selector: "#header", propName: "display", value: "none" },
-        { selector: "#filelist-header", propName: "display", value: "none" },
-        { selector: "#body-user", propName: "height", value: "100%" },
-        { selector: "#content", propName: "padding-top", value: 0 },
-        { selector: "#content-vue", propName: "padding-top", value: 0 },
-        { selector: "#app-navigation", propName: "top", value: 0 },
-        { selector: "#app-navigation-vue", propName: "top", value: 0 },
-        { selector: "#controls", propName: "top", value: 0 },
-        { selector: ".header", propName: "top", value: 0 },
-        { selector: "#filestable thead", propName: "top", value: "44px" },
-    ];
-    for (const { selector, propName, value } of items) {
-        const element = document.querySelector(selector);
-        if (element) {
-            element.style.setProperty(propName, value, "important");
-        }
-    }
-}
+refine();
+postUrl();

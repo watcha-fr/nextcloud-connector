@@ -77,7 +77,24 @@ class Dav {
         $dispatcher = \OC::$server->get(\OCP\EventDispatcher\IEventDispatcher::class);
         $legacyDispatcher = \OC::$server->getEventDispatcher();
 
-        $calDavBackend = new CalDavBackend($db, $principalBackend, $userManager, \OC::$server->getGroupManager(), $random, $logger, $dispatcher, $legacyDispatcher, false);
+        list($major,) = \OCP\Util::getVersion();
+        if ($major > 21) {
+            $config = \OC::$server->get(\OCP\IConfig::class);
+            $calDavBackend = new CalDavBackend(
+                $db,
+                $principalBackend,
+                $userManager,
+                \OC::$server->getGroupManager(),
+                $random,
+                $logger,
+                $dispatcher,
+                $legacyDispatcher,
+                $config,
+                false
+            );
+        } else {
+            $calDavBackend = new CalDavBackend($db, $principalBackend, $userManager, \OC::$server->getGroupManager(), $random, $logger, $dispatcher, $legacyDispatcher, false);
+        }
 
         $debugging = \OC::$server->getConfig()->getSystemValue('debug', false);
         $sendInvitations = \OC::$server->getConfig()->getAppValue('dav', 'sendInvitations', 'yes') === 'yes';

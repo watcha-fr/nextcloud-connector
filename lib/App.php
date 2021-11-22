@@ -27,7 +27,7 @@ declare(strict_types=1);
 namespace OCA\Watcha;
 
 class App {
-    public function extendJsConfig($settings) {
+    public static function extendJsConfig($settings) {
         $appConfig = json_decode($settings["array"]["oc_appconfig"], true);
 
         $watchaOrigin = \OC::$server->getConfig()->getSystemValueString("watcha_origin");

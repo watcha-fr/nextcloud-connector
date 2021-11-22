@@ -24,34 +24,18 @@ declare(strict_types=1);
  *
  */
 
-namespace OCA\Watcha\Middleware;
+namespace OCA\Watcha;
 
-use OCP\AppFramework\Middleware;
-use OCP\IConfig;
+class App {
+    public function extendJsConfig($settings) {
+        $appConfig = json_decode($settings["array"]["oc_appconfig"], true);
 
-use OCA\Watcha\Exception\NotServiceAccountException;
+        $watchaOrigin = \OC::$server->getConfig()->getSystemValueString("watcha_origin");
 
-class SecurityMiddleware extends Middleware {
+        $appConfig["watcha"] = [
+            "origin" => $watchaOrigin
+        ];
 
-    /** @var string */
-    private $userId;
-
-	/** @var IConfig */
-    private $config;
-
-    public function __construct(string $userId, IConfig $config) {
-        $this->userId = $userId;
-        $this->config = $config;
-    }
-
-    /**
-     * @param Controller $controller
-     * @param string $methodName
-     * @throws NotServiceAccountException
-     */
-    public function beforeController($controller, $methodName) {
-        if ($this->userId !== $this->config->getSystemValue("watcha_service_account", "watcha")) {
-            throw new NotServiceAccountException();
-        };
+        $settings["array"]["oc_appconfig"] = json_encode($appConfig);
     }
 }

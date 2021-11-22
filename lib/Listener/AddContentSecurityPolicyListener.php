@@ -24,34 +24,31 @@ declare(strict_types=1);
  *
  */
 
-namespace OCA\Watcha\Middleware;
+namespace OCA\Watcha\Listener;
 
-use OCP\AppFramework\Middleware;
+use OCP\AppFramework\Http\EmptyContentSecurityPolicy;
+use OCP\EventDispatcher\Event;
+use OCP\EventDispatcher\IEventListener;
 use OCP\IConfig;
+use OCP\Security\CSP\AddContentSecurityPolicyEvent;
 
-use OCA\Watcha\Exception\NotServiceAccountException;
+class AddContentSecurityPolicyListener implements IEventListener {
 
-class SecurityMiddleware extends Middleware {
-
-    /** @var string */
-    private $userId;
-
-	/** @var IConfig */
+    /** @var IConfig */
     private $config;
 
-    public function __construct(string $userId, IConfig $config) {
-        $this->userId = $userId;
+    public function __construct(IConfig $config) {
         $this->config = $config;
     }
 
-    /**
-     * @param Controller $controller
-     * @param string $methodName
-     * @throws NotServiceAccountException
-     */
-    public function beforeController($controller, $methodName) {
-        if ($this->userId !== $this->config->getSystemValue("watcha_service_account", "watcha")) {
-            throw new NotServiceAccountException();
-        };
+    public function handle(Event $event): void {
+        if (!$event instanceof AddContentSecurityPolicyEvent) {
+            return;
+        }
+        $policy = new EmptyContentSecurityPolicy();
+        $origin = $this->config->getSystemValueString("watcha_origin");
+        $domain = preg_replace("/^https?:\/\//i", "", $origin);
+        $policy->addAllowedFrameAncestorDomain($domain);
+        $event->addPolicy($policy);
     }
 }

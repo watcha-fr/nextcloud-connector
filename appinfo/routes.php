@@ -35,6 +35,7 @@ declare(strict_types=1);
 
 return [
     'routes' => [
+        // Calendars & Tasks
         [
             'name' => 'calendar#addUser',
             'url'  => '/users',
@@ -80,5 +81,16 @@ return [
             'url'  => '/calendars/displayname',
             'verb' => 'PUT',
         ],
+        // Documents
+		[
+			'name' => 'document#createShare',
+			'url'  => '/documents',
+			'verb' => 'POST',
+		],
+		[
+			'name' => 'document#deleteShare',
+			'url'  => '/documents/{id}',
+			'verb' => 'DELETE',
+		],
     ]
 ];

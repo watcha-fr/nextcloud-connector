@@ -38,6 +38,7 @@ use OCP\IGroup;
 use OCP\IGroupManager;
 use OCP\IRequest;
 use OCP\IUserManager;
+use OCP\Util;
 use Sabre\DAV\Exception\NotFound;
 use Sabre\Uri;
 
@@ -435,7 +436,12 @@ class CalendarController extends Controller {
             $this->logger->warning("calendar $calendarId no found, can't delete it");
             return;
         }
-        $this->caldav->deleteCalendar($calendarId);
+        list($major,) = Util::getVersion();
+        if ($major > 21) {
+            $this->caldav->deleteCalendar($calendarId, true);
+        } else {
+            $this->caldav->deleteCalendar($calendarId);
+        }
         $this->logger->info("calendar $calendarId deleted");
     }
 

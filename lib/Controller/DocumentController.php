@@ -63,7 +63,7 @@ class DocumentController extends ShareAPIController {
         IServerContainer $serverContainer,
         IUserStatusManager $userStatusManager,
         IPreview $previewManager,
-        LoggerInterface $logger,
+        LoggerInterface $logger
     ) {
         parent::__construct(
             $appName,

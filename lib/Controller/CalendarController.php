@@ -106,7 +106,7 @@ class CalendarController extends Controller {
         $fmtCalendars = [];
         foreach ($calendars as $calendar) {
             $fmtCalendars[] = [
-                "id" => $calendar["id"],
+                "id" => (int) $calendar["id"],
                 "displayname" => $calendar[DISPLAYNAME_KEY],
                 "components" => $calendar[SUPPORTED_CALENDAR_COMPONENT_SET_KEY]->getValue()
             ];
@@ -209,7 +209,7 @@ class CalendarController extends Controller {
         foreach ($orderedCalendars as $calendar) {
             $uri = $calendar["uri"];
             $path = "calendars/$userId/$uri";
-            $order = $calendar["id"] === $calendarId ? 0 : $i++;
+            $order = (int) $calendar["id"] === $calendarId ? 0 : $i++;
             $properties = [CALENDAR_ORDER_KEY => $order];
             $server->updateProperties($path, $properties);
         }
@@ -376,7 +376,7 @@ class CalendarController extends Controller {
     private function getFormatedCalendar(int $calendarId) {
         $calendar = $this->caldav->getCalendarById($calendarId);
         return [
-            "id" => $calendar["id"],
+            "id" => (int) $calendar["id"],
             "components" => $calendar[SUPPORTED_CALENDAR_COMPONENT_SET_KEY]->getValue(),
             "is_personal" => $this->getUserIdFromCalendarId($calendarId) !== $this->userId
         ];
@@ -394,7 +394,7 @@ class CalendarController extends Controller {
         $principalUri = "principals/users/$userId";
         $calendars = $this->caldav->getCalendarsForUser($principalUri);
         foreach ($calendars as $calendar) {
-            if ($calendar["id"] !== $calendarId) {
+            if ((int) $calendar["id"] !== $calendarId) {
                 continue;
             }
             $uri = $calendar["uri"];
@@ -663,7 +663,7 @@ class CalendarController extends Controller {
             $this->logger->warning("calendar $calendarUri owned by $userId no found, can't get ID");
             return;
         }
-        return $calendar["id"];
+        return (int) $calendar["id"];
     }
 
     /**

@@ -20,6 +20,6 @@
     <screenshot small-thumbnail="https://raw.githubusercontent.com/watcha.fr/nextcloud-connector/master/screenshots/watcha2-thumbnail.png">https://raw.githubusercontent.com/watcha.fr/nextcloud-connector/master/screenshots/watcha2.png</screenshot>
 
     <dependencies>
-        <nextcloud min-version="20" max-version="22"/>
+        <nextcloud min-version="20" max-version="23"/>
     </dependencies>
 </info>

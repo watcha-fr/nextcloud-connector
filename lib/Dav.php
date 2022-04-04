@@ -51,6 +51,8 @@ class Dav {
      * @return \Sabre\DAV\Server
      */
     public static function getServerInstance(IDBConnection $connection = null, IUser $user = null) {
+        list($major,) = \OCP\Util::getVersion();
+
         $authBackend = new Auth(
             \OC::$server->getSession(),
             \OC::$server->getUserSession(),
@@ -59,17 +61,32 @@ class Dav {
             \OC::$server->getBruteForceThrottler(),
             'principals/'
         );
-        $principalBackend = new Principal(
-            \OC::$server->getUserManager(),
-            \OC::$server->getGroupManager(),
-            \OC::$server->getShareManager(),
-            \OC::$server->getUserSession(),
-            \OC::$server->getAppManager(),
-            \OC::$server->query(\OCA\DAV\CalDAV\Proxy\ProxyMapper::class),
-            \OC::$server->get(KnownUserService::class),
-            \OC::$server->getConfig(),
-            'principals/'
-        );
+        if ($major > 22) {
+            $principalBackend = new Principal(
+                \OC::$server->getUserManager(),
+                \OC::$server->getGroupManager(),
+                \OC::$server->getShareManager(),
+                \OC::$server->getUserSession(),
+                \OC::$server->getAppManager(),
+                \OC::$server->query(\OCA\DAV\CalDAV\Proxy\ProxyMapper::class),
+                \OC::$server->get(KnownUserService::class),
+                \OC::$server->getConfig(),
+	            \OC::$server->get(\OCP\L10N\IFactory::class),
+                'principals/'
+            );
+        } else {
+            $principalBackend = new Principal(
+                \OC::$server->getUserManager(),
+                \OC::$server->getGroupManager(),
+                \OC::$server->getShareManager(),
+                \OC::$server->getUserSession(),
+                \OC::$server->getAppManager(),
+                \OC::$server->query(\OCA\DAV\CalDAV\Proxy\ProxyMapper::class),
+                \OC::$server->get(KnownUserService::class),
+                \OC::$server->getConfig(),
+                'principals/'
+            );
+        }
         $db = \OC::$server->getDatabaseConnection();
         $userManager = \OC::$server->getUserManager();
         $random = \OC::$server->getSecureRandom();
@@ -77,7 +94,6 @@ class Dav {
         $dispatcher = \OC::$server->get(\OCP\EventDispatcher\IEventDispatcher::class);
         $legacyDispatcher = \OC::$server->getEventDispatcher();
 
-        list($major,) = \OCP\Util::getVersion();
         if ($major > 21) {
             $config = \OC::$server->get(\OCP\IConfig::class);
             $calDavBackend = new CalDavBackend(

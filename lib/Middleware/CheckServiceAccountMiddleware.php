@@ -28,6 +28,7 @@ namespace OCA\Watcha\Middleware;
 
 use Psr\Log\LoggerInterface;
 
+use OC\AppFramework\Utility\ControllerMethodReflector;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\AppFramework\Middleware;
 use OCP\IConfig;
@@ -45,14 +46,19 @@ class CheckServiceAccountMiddleware extends Middleware {
     /** @var LoggerInterface */
     private $logger;
 
+    /** @var ControllerMethodReflector */
+    private $reflector;
+
     public function __construct(
         ?string $userId,
         IConfig $config,
         LoggerInterface $logger,
+        ControllerMethodReflector $reflector,
     ) {
         $this->userId = $userId;
         $this->config = $config;
         $this->logger = $logger;
+        $this->reflector = $reflector;
     }
 
     /**
@@ -61,7 +67,11 @@ class CheckServiceAccountMiddleware extends Middleware {
      * @throws NotServiceAccountException
      */
     public function beforeController($controller, $methodName) {
-        if ($this->userId !== $this->config->getSystemValue("watcha_service_account", "watcha")) {
+        $isPublicPage = $this->reflector->hasAnnotation('PublicPage');
+        if (
+            !$isPublicPage &&
+            $this->userId !== $this->config->getSystemValue("watcha_service_account", "watcha")
+        ) {
             throw new NotServiceAccountException();
         };
     }

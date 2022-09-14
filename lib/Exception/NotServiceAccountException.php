@@ -30,6 +30,6 @@ use OCP\AppFramework\Http;
 
 class NotServiceAccountException extends \Exception {
     public function __construct() {
-        parent::__construct("Requester must be a configured service account.", Http::STATUS_FORBIDDEN);
+        parent::__construct("Requester must be a configured service account", Http::STATUS_FORBIDDEN);
     }
 }

@@ -46,7 +46,7 @@ class CheckServiceAccountMiddleware extends Middleware {
     private $logger;
 
     public function __construct(
-        string $userId,
+        ?string $userId,
         IConfig $config,
         LoggerInterface $logger,
     ) {

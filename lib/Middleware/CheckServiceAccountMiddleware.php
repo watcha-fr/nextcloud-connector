@@ -31,7 +31,7 @@ use OCP\IConfig;
 
 use OCA\Watcha\Exception\NotServiceAccountException;
 
-class SecurityMiddleware extends Middleware {
+class CheckServiceAccountMiddleware extends Middleware {
 
     /** @var string */
     private $userId;

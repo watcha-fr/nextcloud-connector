@@ -34,7 +34,7 @@ use OCP\Security\CSP\AddContentSecurityPolicyEvent;
 use OCP\Util;
 
 use OCA\Watcha\Listener\AddContentSecurityPolicyListener;
-use OCA\Watcha\Middleware\SecurityMiddleware;
+use OCA\Watcha\Middleware\CheckServiceAccountMiddleware;
 
 /**
  * Class Application
@@ -59,7 +59,7 @@ class Application extends App implements IBootstrap {
      * @inheritDoc
      */
     public function register(IRegistrationContext $context): void {
-        $context->registerMiddleware(SecurityMiddleware::class);
+        $context->registerMiddleware(CheckServiceAccountMiddleware::class);
 		$context->registerEventListener(AddContentSecurityPolicyEvent::class, AddContentSecurityPolicyListener::class);
     }
 

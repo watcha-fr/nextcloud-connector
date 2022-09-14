@@ -73,8 +73,8 @@ class CalendarController extends Controller {
     private $config;
 
     public function __construct(
-        string $AppName,
-        ?string $UserId,
+        string $appName,
+        ?string $userId,
         IRequest $request,
         LoggerInterface $logger,
         CalDavBackend $caldav,
@@ -83,8 +83,8 @@ class CalendarController extends Controller {
         IGroupManager $groupManager,
         IConfig $config
     ) {
-        parent::__construct($AppName, $request);
-        $this->userId = $UserId;
+        parent::__construct($appName, $request);
+        $this->userId = $userId;
         $this->logger = $logger;
         $this->caldav = $caldav;
         $this->connection = $connection;

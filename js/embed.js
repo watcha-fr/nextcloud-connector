@@ -36,20 +36,24 @@ function embed() {
 function embedFileExplorer() {
     _hideFilesToolbar();
     const style = `
-        #filelist-header,
-        .app-sidebar,
-        #app-sidebar,
-        #view-toggle,
-        #headerSelection,
-        #headerSize,
-        .selection,
+        #app-navigation,                /* left panel */
+        #filelist-header,               /* notes section */
+        #controls span.icon-shared,     /* breadcrumb share icon */
+        #view-toggle,                   /* top right button */
+        #selectedActionsList,
         .fileactions,
-        .filesize {
+        #rightClickMenus,
+        aside {                         /* right panel */
             display: none !important;
         }
         
         #app-content {
+            margin-left: 0 !important;
             transform: none !important;
+        }
+        
+        tr[data-type="file"] > td:not(.selection) {
+            pointer-events: none;
         }`;
     _injectStyle(style);
 }

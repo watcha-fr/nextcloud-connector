@@ -56,6 +56,11 @@ function embedFileExplorer() {
 
 function embedFilesWidget() {
     _hideFilesToolbar();
+    const style = `
+        #controls .crumb.ui-droppable { /* breadcrumb ancestors */
+            display: none !important;
+        }`;
+    _injectStyle(style);
 }
 
 function embedCalendarWidget() {

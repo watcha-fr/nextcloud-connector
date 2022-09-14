@@ -72,7 +72,7 @@ function embedCalendarWidget() {
 }
 
 function embedTasksWidget() {
-    _hideCalendarToolbar()
+    _hideCalendarToolbar();
     const style = `
         .header {
             top: 0 !important;

@@ -23,25 +23,26 @@
 "use strict";
 
 function embed() {
-    const params = new URLSearchParams(window.location.search);
-    const embed = params.get("embed-watcha");
-    if (embed === "file-explorer" || window.name === "watcha-file-explorer") {
-        window.name = "watcha-file-explorer";
-        embedFileExplorer();
-    } else if (embed === "widget" || window.name === "watcha-widget") {
-        window.name = "watcha-widget";
-        const isCurrentChunck = chunck =>
-            new RegExp(`^${OC.webroot}(/index.php)?/${chunck}`).test(window.location.pathname);
-        const isCurrentApp = appName => isCurrentChunck("apps/" + appName);
-        if (isCurrentApp("files")) {
-            embedFilesWidget();
-        } else if (isCurrentApp("calendar")) {
-            embedCalendarWidget();
-        } else if (isCurrentApp("tasks")) {
-            embedTasksWidget();
-        } else if (isCurrentChunck("s/[A-Za-z0-9]+?")) {
-            embedDirectLinkFilesWidget();
-        }
+    const params = new URLSearchParams(window.parent.location.search);
+    const flavor = params.get("flavor");
+    switch (flavor) {
+        case "file-explorer":
+            embedFileExplorer();
+            break;
+        case "widget":
+            const isCurrentChunck = chunck =>
+                new RegExp(`^${OC.webroot}(/index.php)?/${chunck}`).test(window.location.pathname);
+            const isCurrentApp = appName => isCurrentChunck("apps/" + appName);
+            if (isCurrentApp("files")) {
+                embedFilesWidget();
+            } else if (isCurrentApp("calendar")) {
+                embedCalendarWidget();
+            } else if (isCurrentApp("tasks")) {
+                embedTasksWidget();
+            } else if (isCurrentChunck("s/[A-Za-z0-9]+?")) {
+                embedDirectLinkFilesWidget();
+            }
+            break;
     }
 }
 

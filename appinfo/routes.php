@@ -92,5 +92,11 @@ return [
 			'url'  => '/documents/{id}',
 			'verb' => 'DELETE',
 		],
+        // Embedding
+        [
+            'name' => 'embedding#embed',
+            'url'  => '/embed',
+            'verb' => 'GET',
+        ],
     ]
 ];

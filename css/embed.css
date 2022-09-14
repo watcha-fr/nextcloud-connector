@@ -1,0 +1,17 @@
+/**
+ * @copyright Copyright (c) 2022, Watcha <contact@watcha.fr>
+ *
+ * @author Charlie Calendre <c-cal@watcha.fr>
+ *
+ * @license GNU AGPL version 3 or any later version
+ *
+ */
+
+#content {
+  height: 100%;
+}
+
+iframe {
+  width: 100%;
+  border: 0;
+}

@@ -47,14 +47,6 @@ function embedFileExplorer() {
         .filesize {
             display: none !important;
         }
-
-        #body-user {
-            height: 100% !important;
-        }
-
-        #filestable > thead {
-            top: 44px !important;
-        }
         
         #app-content {
             transform: none !important;
@@ -67,34 +59,14 @@ function embedFilesWidget() {
 }
 
 function embedCalendarWidget() {
-    const style = `
-        #header {
-            display: none !important;
-        }
-
-        #app-navigation-vue {
-            top: 0 !important;
-        }
-
-        #content-vue {
-            padding-top: 0 !important;
-        }`;
-    _injectStyle(style);
+    _hideCalendarToolbar();
 }
 
 function embedTasksWidget() {
+    _hideCalendarToolbar()
     const style = `
-        #header {
-            display: none !important;
-        }
-
-        #app-navigation-vue,
         .header {
             top: 0 !important;
-        }
-
-        #content-vue {
-            padding-top: 0 !important;
         }`;
     _injectStyle(style);
 }
@@ -132,6 +104,31 @@ function _hideFilesToolbar() {
         }
 
         #content {
+            padding-top: 0 !important;
+        }
+
+        #body-user,
+        #app-navigation {
+            height: 100% !important;
+        }
+
+        #filestable > thead {
+            top: 44px !important;
+        }`;
+    _injectStyle(style);
+}
+
+function _hideCalendarToolbar() {
+    const style = `
+        #header {
+            display: none !important;
+        }
+
+        #app-navigation-vue {
+            height: 100vh !important;
+        }
+
+        #content-vue {
             padding-top: 0 !important;
         }`;
     _injectStyle(style);

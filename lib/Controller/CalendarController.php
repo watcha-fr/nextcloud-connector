@@ -74,7 +74,7 @@ class CalendarController extends Controller {
 
     public function __construct(
         string $AppName,
-        string $UserId,
+        ?string $UserId,
         IRequest $request,
         LoggerInterface $logger,
         CalDavBackend $caldav,

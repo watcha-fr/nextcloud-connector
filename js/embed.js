@@ -14,6 +14,7 @@ function embed() {
     const flavor = params.get("flavor");
     switch (flavor) {
         case "file-explorer":
+            console.debug("[watcha] embedding file-explorer");
             watchDocumentSelection();
             embedFileExplorer();
             break;
@@ -22,12 +23,16 @@ function embed() {
                 new RegExp(`^${OC.webroot}(/index.php)?/${chunck}`).test(window.location.pathname);
             const isCurrentApp = appName => isCurrentChunck("apps/" + appName);
             if (isCurrentApp("files")) {
+                console.debug("[watcha] files widget");
                 embedFilesWidget();
             } else if (isCurrentApp("calendar")) {
+                console.debug("[watcha] calendar widget");
                 embedCalendarWidget();
             } else if (isCurrentApp("tasks")) {
+                console.debug("[watcha] tasks widget");
                 embedTasksWidget();
             } else if (isCurrentChunck("s/[A-Za-z0-9]+?")) {
+                console.debug("[watcha] direct link files widget");
                 embedDirectLinkFilesWidget();
             }
             break;
@@ -47,12 +52,12 @@ function embedFileExplorer() {
         aside {                         /* right panel */
             display: none !important;
         }
-        
+
         #app-content {
             margin-left: 0 !important;
             transform: none !important;
         }
-        
+
         tr[data-type="file"] > td:not(.selection) {
             pointer-events: none;
         }`;
@@ -179,6 +184,7 @@ function watchDocumentSelection() {
     const observer = new MutationObserver(callback);
     const config = { attributes: true, subtree: true };
     observer.observe(fileList, config);
+    console.debug("[watcha] watching document selection...");
 }
 
 function postSelectedDocuments() {
@@ -189,7 +195,7 @@ function postSelectedDocuments() {
         type: el.dataset.type,
         mime: el.dataset.mime,
     }));
-    console.debug("[watcha] selected documents:", documents)
+    console.debug("[watcha] selected documents:", documents);
     window.parent.parent.postMessage(documents, OC.appConfig.watcha?.origin || "");
 }
 

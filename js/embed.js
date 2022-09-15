@@ -189,6 +189,7 @@ function postSelectedDocuments() {
         type: el.dataset.type,
         mime: el.dataset.mime,
     }));
+    console.debug("[watcha] selected documents:", documents)
     window.parent.parent.postMessage(documents, OC.appConfig.watcha?.origin || "");
 }
 

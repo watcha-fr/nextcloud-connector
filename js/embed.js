@@ -23,16 +23,16 @@ function embed() {
                 new RegExp(`^${OC.webroot}(/index.php)?/${chunck}`).test(window.location.pathname);
             const isCurrentApp = appName => isCurrentChunck("apps/" + appName);
             if (isCurrentApp("files")) {
-                console.debug("[watcha] files widget");
+                console.debug("[watcha] embedding files widget");
                 embedFilesWidget();
             } else if (isCurrentApp("calendar")) {
-                console.debug("[watcha] calendar widget");
+                console.debug("[watcha] embedding calendar widget");
                 embedCalendarWidget();
             } else if (isCurrentApp("tasks")) {
-                console.debug("[watcha] tasks widget");
+                console.debug("[watcha] embedding tasks widget");
                 embedTasksWidget();
             } else if (isCurrentChunck("s/[A-Za-z0-9]+?")) {
-                console.debug("[watcha] direct link files widget");
+                console.debug("[watcha] embedding direct link files widget");
                 embedDirectLinkFilesWidget();
             }
             break;
@@ -184,7 +184,7 @@ function watchDocumentSelection() {
     const observer = new MutationObserver(callback);
     const config = { attributes: true, subtree: true };
     observer.observe(fileList, config);
-    console.debug("[watcha] watching document selection...");
+    console.debug("[watcha] watching document selection");
 }
 
 function postSelectedDocuments() {

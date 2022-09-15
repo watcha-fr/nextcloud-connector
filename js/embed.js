@@ -193,4 +193,13 @@ function postSelectedDocuments() {
     window.parent.parent.postMessage(documents, OC.appConfig.watcha?.origin || "");
 }
 
-embed();
+if (
+    // this window must be an iframe
+    window.self !== window.parent &&
+    // this window must be embedded by the Watcha connector for Nextcloud
+    window.parent.location.pathname === OC.webroot + "/apps/watcha/embed" &&
+    // the parent window must also be an iframe (ie: a Matrix widget)
+    window.parent != window.top
+) {
+    embed();
+}

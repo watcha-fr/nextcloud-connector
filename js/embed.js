@@ -60,11 +60,7 @@ function embedFileExplorer() {
 
 function embedFilesWidget() {
     _hideFilesToolbar();
-    const style = `
-        #controls .crumb.ui-droppable { /* breadcrumb ancestors */
-            display: none !important;
-        }`;
-    _injectStyle(style);
+    _hideBreadcrumbAncestors();
 }
 
 function embedCalendarWidget() {
@@ -141,6 +137,19 @@ function _hideCalendarToolbar() {
             padding-top: 0 !important;
         }`;
     _injectStyle(style);
+}
+
+function _hideBreadcrumbAncestors() {
+    window.onload = event => {
+        const initialBreadcrumbAncestors = document.querySelectorAll("#controls .crumb.ui-droppable > a");
+        const links = Array.from(initialBreadcrumbAncestors).map(el => el.getAttribute("href"));
+        setInterval(() => {
+            links.forEach(ln => {
+                const element = document.querySelector(`#controls .crumb.ui-droppable > a[href~="${ln}"]`).parentNode;
+                element.classList.add("hidden");
+            });
+        }, 200);
+    };
 }
 
 function _injectStyle(style) {

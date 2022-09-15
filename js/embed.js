@@ -14,6 +14,7 @@ function embed() {
     const flavor = params.get("flavor");
     switch (flavor) {
         case "file-explorer":
+            watchDocumentSelection();
             embedFileExplorer();
             break;
         case "widget":
@@ -61,7 +62,11 @@ function embedFileExplorer() {
 function embedFilesWidget() {
     _hideFilesToolbar();
     _hideBreadcrumbAncestors();
-    _pruneLeftPanel();
+    const style = `
+        #app-navigation > ul > li:not(.pinned) {
+            display: none !important;
+        }`;
+    _injectStyle(style);
 }
 
 function embedCalendarWidget() {
@@ -155,30 +160,35 @@ function _hideBreadcrumbAncestors() {
     };
 }
 
-function _pruneLeftPanel() {
-    const style = `
-        #app-navigation > ul > li:not(.pinned) {
-            display: none !important;
-        }`;
-    _injectStyle(style);
-}
-
 function _injectStyle(style) {
     let element = document.createElement("style");
     element.innerHTML = style;
     document.head.appendChild(element);
 }
 
-function postUrl(prevUrl) {
-    const url = window.location.href;
-    if (prevUrl && url !== prevUrl) {
-        window.parent.postMessage(url, OC.appConfig.watcha?.origin || "");
-    }
-    // HACK: to detect URLSearchParams changes that do not trigger a page reload
-    setTimeout(() => {
-        postUrl(url);
-    }, 200);
+function watchDocumentSelection() {
+    const fileList = document.getElementById("fileList");
+    const callback = mutationsList => {
+        for (let mutation of mutationsList) {
+            if (mutation.attributeName === "class" && mutation.target.parentElement === fileList) {
+                postSelectedDocuments();
+            }
+        }
+    };
+    const observer = new MutationObserver(callback);
+    const config = { attributes: true, subtree: true };
+    observer.observe(fileList, config);
+}
+
+function postSelectedDocuments() {
+    const elements = document.querySelectorAll("#fileList > tr.selected");
+    const documents = Array.from(elements).map(el => ({
+        id: el.dataset.id,
+        name: el.dataset.file,
+        type: el.dataset.type,
+        mime: el.dataset.mime,
+    }));
+    window.parent.parent.postMessage(documents, OC.appConfig.watcha?.origin || "");
 }
 
 embed();
-postUrl();

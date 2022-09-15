@@ -172,6 +172,7 @@ function watchDocumentSelection() {
         for (let mutation of mutationsList) {
             if (mutation.attributeName === "class" && mutation.target.parentElement === fileList) {
                 postSelectedDocuments();
+                break;
             }
         }
     };

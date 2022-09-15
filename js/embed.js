@@ -140,14 +140,17 @@ function _hideCalendarToolbar() {
 }
 
 function _hideBreadcrumbAncestors() {
-    window.onload = event => { // wait for the breadcrumbs to be built by JS
-        const ancestorSelector = "#controls > .breadcrumb > :is(.crumbmenu, .ui-droppable)"
-        const n = document.querySelectorAll(ancestorSelector).length ;
+    document.getElementById("controls").style.visibility = "hidden";
+    // wait for the breadcrumbs to be built by JS
+    window.onload = event => {
+        const ancestorSelector = "#controls > .breadcrumb > :is(.crumbmenu, .ui-droppable)";
+        const n = document.querySelectorAll(ancestorSelector).length;
         const style = `
             ${ancestorSelector}:not(:nth-child(n+${n + 1})) {
                 display: none !important;
             }`;
         _injectStyle(style);
+        document.getElementById("controls").style.visibility = "visible";
     };
 }
 

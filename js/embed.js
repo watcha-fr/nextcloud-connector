@@ -61,6 +61,7 @@ function embedFileExplorer() {
 function embedFilesWidget() {
     _hideFilesToolbar();
     _hideBreadcrumbAncestors();
+    _pruneLeftPanel();
 }
 
 function embedCalendarWidget() {
@@ -152,6 +153,14 @@ function _hideBreadcrumbAncestors() {
         _injectStyle(style);
         document.getElementById("controls").style.visibility = "visible";
     };
+}
+
+function _pruneLeftPanel() {
+    const style = `
+        #app-navigation > ul > li:not(.pinned) {
+            display: none !important;
+        }`;
+    _injectStyle(style);
 }
 
 function _injectStyle(style) {

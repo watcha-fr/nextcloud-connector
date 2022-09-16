@@ -68,7 +68,8 @@ class EmbeddingController extends Controller {
         $oidcIssuerUrl = $this->config->getSystemValueString("oidc_login_provider_url");
         if ($oidcIssuerUrl !== "") {
             $policy = new ContentSecurityPolicy();
-            $policy->addAllowedFrameDomain($oidcIssuerUrl);
+            $allowedFrameDomain = rtrim($oidcIssuerUrl, "/") . "/";
+            $policy->addAllowedFrameDomain($allowedFrameDomain);
             $response->setContentSecurityPolicy($policy);
         }
 

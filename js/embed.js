@@ -43,6 +43,7 @@ function embedFileExplorer() {
     _hideFilesToolbar();
     const style = `
         #app-navigation,                /* left panel */
+        #app-navigation-toggle,
         #filelist-header,               /* notes section */
         #controls span.icon-shared,     /* breadcrumb share icon */
         #view-toggle,                   /* top right button */
@@ -51,6 +52,10 @@ function embedFileExplorer() {
         #rightClickMenus,
         aside {                         /* right panel */
             display: none !important;
+        }
+
+        #controls {
+            padding-left: 0 !important;
         }
 
         #app-content {

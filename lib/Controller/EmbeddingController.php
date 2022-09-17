@@ -26,6 +26,7 @@ declare(strict_types=1);
 
 namespace OCA\Watcha\Controller;
 
+use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\TemplateResponse;
@@ -38,16 +39,21 @@ class EmbeddingController extends Controller {
     /** @var String */
     protected $appName;
 
+    /** @var IAppManager */
+    private $appManager;
+
     /** @var IConfig */
     private $config;
 
     public function __construct(
         string $appName,
         IRequest $request,
+        IAppManager $appManager,
         IConfig $config
     ) {
         parent::__construct($appName, $request);
         $this->appName = $appName;
+        $this->appManager = $appManager;
         $this->config = $config;
     }
 
@@ -65,8 +71,9 @@ class EmbeddingController extends Controller {
 
         $response = new TemplateResponse($this->appName, "embed", ["url" => $url], TemplateResponse::RENDER_AS_BASE);
 
+        $oidcAppEnabled = $this->appManager->isInstalled("oidc_login");
         $oidcIssuerUrl = $this->config->getSystemValueString("oidc_login_provider_url");
-        if ($oidcIssuerUrl !== "") {
+        if ($oidcAppEnabled && $oidcIssuerUrl !== "") {
             $policy = new ContentSecurityPolicy();
             $allowedFrameDomain = rtrim($oidcIssuerUrl, "/") . "/";
             $policy->addAllowedFrameDomain($allowedFrameDomain);

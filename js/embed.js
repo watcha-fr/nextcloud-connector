@@ -71,7 +71,7 @@ function embedFileExplorer() {
 
 function embedFilesWidget() {
     _hideFilesToolbar();
-    _hideBreadcrumbAncestors();
+    _watchForBreadcrumb();
     const style = `
         #app-navigation > ul > li:not(.pinned) {
             display: none !important;
@@ -155,19 +155,35 @@ function _hideCalendarToolbar() {
     _injectStyle(style);
 }
 
-function _hideBreadcrumbAncestors() {
-    document.getElementById("controls").style.visibility = "hidden";
-    // wait for the breadcrumbs to be built by JS
-    window.onload = event => {
-        const ancestorSelector = "#controls > .breadcrumb > :is(.crumbmenu, .ui-droppable)";
-        const n = document.querySelectorAll(ancestorSelector).length;
-        const style = `
-            ${ancestorSelector}:not(:nth-child(n+${n + 1})) {
-                display: none !important;
-            }`;
-        _injectStyle(style);
-        document.getElementById("controls").style.visibility = "visible";
+function _watchForBreadcrumb() {
+    const controls = document.getElementById("controls");
+    controls.style.visibility = "hidden";
+    const callback = mutationsList => {
+        for (let mutation of mutationsList) {
+            for (let node of mutation.addedNodes) {
+                if (node.className === "breadcrumb") {
+                    observer.disconnect();
+                    _hideBreadcrumbAncestors();
+                    controls.style.visibility = "visible";
+                    return;
+                }
+            }
+        }
     };
+    const observer = new MutationObserver(callback);
+    const config = { childList: true };
+    observer.observe(controls, config);
+    console.debug("[watcha] watching for breadcrumb");
+}
+
+function _hideBreadcrumbAncestors() {
+    const ancestorSelector = "#controls > .breadcrumb > :is(.crumbmenu, .ui-droppable)";
+    const n = document.querySelectorAll(ancestorSelector).length;
+    const style = `
+    ${ancestorSelector}:not(:nth-child(n+${n + 1})) {
+        display: none !important;
+    }`;
+    _injectStyle(style);
 }
 
 function _injectStyle(style) {

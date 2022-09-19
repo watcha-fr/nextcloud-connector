@@ -177,9 +177,13 @@ function _watchForBreadcrumb() {
 }
 
 function _hideBreadcrumbAncestors() {
+    console.debug("[watcha] hidding breadcrumb");
     const ancestorSelector = "#controls > .breadcrumb > :is(.crumbmenu, .ui-droppable)";
     const n = document.querySelectorAll(ancestorSelector).length;
     const style = `
+    #controls > .breadcrumb > .crumb {
+        display: inline-flex !important;
+    }
     ${ancestorSelector}:not(:nth-child(n+${n + 1})) {
         display: none !important;
     }`;

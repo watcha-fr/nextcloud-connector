@@ -197,31 +197,28 @@ function _injectStyle(style) {
 }
 
 function watchDocumentSelection() {
-    const fileList = document.getElementById("fileList");
-    const callback = mutationsList => {
-        for (let mutation of mutationsList) {
-            if (mutation.attributeName === "class" && mutation.target.parentElement === fileList) {
-                postSelectedDocuments();
-                break;
-            }
-        }
-    };
-    const observer = new MutationObserver(callback);
-    const config = { attributes: true, subtree: true };
-    observer.observe(fileList, config);
     console.debug("[watcha] watching document selection");
+    document.getElementById("select_all_files").addEventListener("input", () => {
+        postSelectedDocuments();
+    });
+    document.getElementById("fileList").addEventListener("input", ({ target }) => {
+        if (
+            target.classList.contains("selectCheckBox") &&
+            target.parentNode.nodeName === "TD" &&
+            target.parentNode.className === "selection"
+        ) {
+            postSelectedDocuments();
+        }
+    });
 }
 
 function postSelectedDocuments() {
-    const elements = document.querySelectorAll("#fileList > tr.selected");
-    const documents = Array.from(elements).map(el => ({
-        id: el.dataset.id,
-        name: el.dataset.file,
-        type: el.dataset.type,
-        mime: el.dataset.mime,
-    }));
-    console.debug("[watcha] selected documents:", documents);
-    window.top.postMessage(documents, OC.appConfig.watcha?.origin || "");
+    // wait for OCA.Files.App.fileList._selectedFiles to be updated
+    _.defer(() => {
+        const documents = OCA.Files.App.fileList.getSelectedFiles();
+        window.top.postMessage(documents, OC.appConfig.watcha?.origin || "");
+        console.debug("[watcha] selected documents++:", documents);
+    });
 }
 
 if (

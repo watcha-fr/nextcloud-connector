@@ -253,7 +253,7 @@ function watchDocumentSelection() {
 function postSelectedDocuments() {
 	// wait for OCA.Files.App.fileList._selectedFiles to be updated
 	window._.defer(() => {
-		const documents = OCA.Files.App.fileList.getSelectedFiles()
+		const documents = OCA.Files.App.getCurrentFileList().getSelectedFiles()
 		window.top.postMessage(documents, OC.appConfig.watcha?.origin || '')
 		console.debug('[watcha] selected documents:', documents)
 	})

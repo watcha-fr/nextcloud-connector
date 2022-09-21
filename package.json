@@ -1,0 +1,43 @@
+{
+  "name": "nextcloud-connector",
+  "description": "This connector allows the integration of the document sharing, calendars and tasks features of Nextcloud in [Watcha](https://watcha.fr). It is thus possible to link the resources of these applications to Watcha rooms thanks to Nextcloud groups.",
+  "version": "0.2",
+  "author": "Charlie Calendre <c-cal@watcha.fr",
+  "bugs": {
+    "url": "https://github.com/watcha-fr/nextcloud-connector/issues"
+  },
+  "repository": {
+    "url": "https://github.com/watcha-fr/nextcloud-connector",
+    "type": "git"
+  },
+  "homepage": "https://github.com/watcha-fr",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "scripts": {
+    "build": "webpack --node-env production --progress",
+    "dev": "webpack --node-env development --progress",
+    "watch": "webpack --node-env development --progress --watch",
+    "serve": "webpack --node-env development serve --progress",
+    "lint": "eslint --ext .js,.vue src",
+    "lint:fix": "eslint --ext .js,.vue src --fix",
+    "stylelint": "stylelint css/*.css css/*.scss src/**/*.scss src/**/*.vue",
+    "stylelint:fix": "stylelint css/*.css css/*.scss src/**/*.scss src/**/*.vue --fix"
+  },
+  "dependencies": {
+    "@nextcloud/router": "^2.0.0"
+  },
+  "browserslist": [
+    "extends @nextcloud/browserslist-config"
+  ],
+  "engines": {
+    "node": "^16.0.0",
+    "npm": "^7.0.0 || ^8.0.0"
+  },
+  "devDependencies": {
+    "@nextcloud/babel-config": "^1.0.0",
+    "@nextcloud/browserslist-config": "^2.3.0",
+    "@nextcloud/eslint-config": "^8.0.0",
+    "@nextcloud/stylelint-config": "^2.2.0",
+    "@nextcloud/webpack-vue-config": "^5.3.0"
+  }
+}

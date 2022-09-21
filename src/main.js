@@ -9,6 +9,8 @@
 
 "use strict";
 
+import { getRootUrl } from "@nextcloud/router";
+
 function embed() {
     const params = new URLSearchParams(window.parent.location.search);
     const flavor = params.get("flavor");
@@ -20,7 +22,7 @@ function embed() {
             break;
         case "widget":
             const isCurrentChunck = chunck =>
-                new RegExp(`^${OC.webroot}(/index.php)?/${chunck}`).test(window.location.pathname);
+                new RegExp(`^${getRootUrl()}(/index.php)?/${chunck}`).test(window.location.pathname);
             const isCurrentApp = appName => isCurrentChunck("apps/" + appName);
             if (isCurrentApp("files")) {
                 console.debug("[watcha] embedding files widget");
@@ -225,7 +227,7 @@ if (
     // this window must be an iframe
     window.self !== window.parent &&
     // this window must be embedded by the Watcha connector for Nextcloud
-    window.parent.location.pathname === OC.webroot + "/apps/watcha/embed"
+    window.parent.location.pathname === getRootUrl() + "/apps/watcha/embed"
 ) {
     embed();
 }

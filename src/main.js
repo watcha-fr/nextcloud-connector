@@ -240,12 +240,9 @@ function watchDocumentSelection() {
 	document.getElementById('select_all_files').addEventListener('input', () => {
 		postSelectedDocuments()
 	})
-	document.getElementById('fileList').addEventListener('input', ({ target }) => {
-		if (
-			target.classList.contains('selectCheckBox')
-            && target.parentNode.nodeName === 'TD'
-            && target.parentNode.className === 'selection'
-		) {
+	const fileList = document.getElementById('fileList')
+	fileList.addEventListener('input', ({ target }) => {
+		if (Array.from(fileList.querySelectorAll('td.selection > .selectCheckBox')).includes(target)) {
 			postSelectedDocuments()
 		}
 	})
@@ -264,10 +261,10 @@ function postSelectedDocuments() {
 }
 
 if (
-// this window must be an iframe
+	// this window must be an iframe
 	window.self !== window.parent
-    // this window must be embedded by the Watcha connector for Nextcloud
-    && window.parent.location.pathname === getRootUrl() + '/apps/watcha/embed'
+	// this window must be embedded by the Watcha connector for Nextcloud
+	&& window.parent.location.pathname === getRootUrl() + '/apps/watcha/embed'
 ) {
 	embed()
 }

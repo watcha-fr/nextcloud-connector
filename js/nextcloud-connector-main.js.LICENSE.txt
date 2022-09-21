@@ -10,6 +10,6 @@
  *
  * @author Charlie Calendre <c-cal@watcha.fr>
  *
- * @license GNU AGPL version 3 or any later version
+ * @license AGPL-3.0-or-later
  *
  */

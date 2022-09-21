@@ -60,7 +60,7 @@ class Application extends App implements IBootstrap {
      */
     public function register(IRegistrationContext $context): void {
         $context->registerMiddleware(CheckServiceAccountMiddleware::class);
-		$context->registerEventListener(AddContentSecurityPolicyEvent::class, AddContentSecurityPolicyListener::class);
+        $context->registerEventListener(AddContentSecurityPolicyEvent::class, AddContentSecurityPolicyListener::class);
     }
 
     /**

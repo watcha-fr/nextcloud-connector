@@ -38,64 +38,64 @@ return [
         // Calendars & Tasks
         [
             'name' => 'calendar#addUser',
-            'url'  => '/users',
+            'url' => '/users',
             'verb' => 'POST',
         ],
         [
             'name' => 'calendar#removeUser',
-            'url'  => '/users/{userId}',
+            'url' => '/users/{userId}',
             'verb' => 'DELETE',
         ],
         [
             'name' => 'calendar#list',
-            'url'  => '/users/{userId}/calendars',
+            'url' => '/users/{userId}/calendars',
             'verb' => 'GET',
         ],
         [
             'name' => 'calendar#get',
-            'url'  => '/users/{userId}/calendars/{calendarId}',
+            'url' => '/users/{userId}/calendars/{calendarId}',
             'verb' => 'GET',
         ],
         [
             'name' => 'calendar#reorder',
-            'url'  => '/users/{userId}/calendars/{calendarId}/top',
+            'url' => '/users/{userId}/calendars/{calendarId}/top',
             'verb' => 'PUT',
         ],
         [
             'name' => 'calendar#share',
-            'url'  => '/users/{userId}/calendars/{calendarId}',
+            'url' => '/users/{userId}/calendars/{calendarId}',
             'verb' => 'PUT',
         ],
         [
             'name' => 'calendar#createAndShare',
-            'url'  => '/calendars',
+            'url' => '/calendars',
             'verb' => 'POST',
         ],
         [
             'name' => 'calendar#unShare',
-            'url'  => '/calendars',
+            'url' => '/calendars',
             'verb' => 'DELETE'
         ],
         [
             'name' => 'calendar#rename',
-            'url'  => '/calendars/displayname',
+            'url' => '/calendars/displayname',
             'verb' => 'PUT',
         ],
         // Documents
-		[
-			'name' => 'document#createShare',
-			'url'  => '/documents',
-			'verb' => 'POST',
-		],
-		[
-			'name' => 'document#deleteShare',
-			'url'  => '/documents/{id}',
-			'verb' => 'DELETE',
-		],
+        [
+            'name' => 'document#createShare',
+            'url' => '/documents',
+            'verb' => 'POST',
+        ],
+        [
+            'name' => 'document#deleteShare',
+            'url' => '/documents/{id}',
+            'verb' => 'DELETE',
+        ],
         // Embedding
         [
             'name' => 'embedding#embed',
-            'url'  => '/embed',
+            'url' => '/embed',
             'verb' => 'GET',
         ],
     ]

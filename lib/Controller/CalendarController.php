@@ -96,7 +96,7 @@ class CalendarController extends Controller {
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
-     * 
+     *
      * @param string $userId
      * @return JSONResponse
      */
@@ -120,7 +120,7 @@ class CalendarController extends Controller {
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
-     * 
+     *
      * @param string $userId
      * @param int $calendarId
      * @return JSONResponse
@@ -139,7 +139,7 @@ class CalendarController extends Controller {
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
-     * 
+     *
      * @param string $userId
      * @param int $calendarId
      * @return JSONResponse
@@ -152,7 +152,7 @@ class CalendarController extends Controller {
         }
         $components = $calendar[SUPPORTED_CALENDAR_COMPONENT_SET_KEY]->getValue();
         if (in_array("VTODO", $components)) {
-            list(, $ownerId) = Uri\split($calendar["principaluri"]);
+            [, $ownerId] = Uri\split($calendar["principaluri"]);
             $calendarUri = $ownerId === $userId ? $calendar["uri"] : $this->computeUriForSharedCalendar($calendar["uri"], $ownerId);
             $value = "/calendars/$calendarUri";
             $this->config->setUserValue($userId, "tasks", "various_initialRoute", $value);
@@ -169,7 +169,7 @@ class CalendarController extends Controller {
 
         $cursor = $query->execute();
 
-        $ocProperties = array();
+        $ocProperties = [];
 
         while ($row = $cursor->fetch()) {
             $order = (int) $row["propertyvalue"];
@@ -183,7 +183,7 @@ class CalendarController extends Controller {
 
         $principalUri = "principals/users/$userId";
         $calendars = $this->caldav->getCalendarsForUser($principalUri);
-        $orderedCalendars = array();
+        $orderedCalendars = [];
 
         foreach ($calendars as $calendar) {
             $owner = $calendar[OWNER_PRINCIPAL_KEY];
@@ -199,7 +199,7 @@ class CalendarController extends Controller {
         foreach ($ocProperties as $propertie) {
             $order = $propertie["order"];
             $calendar = $propertie["calendar"];
-            array_splice($orderedCalendars, $order, 0, array($calendar));
+            array_splice($orderedCalendars, $order, 0, [$calendar]);
         }
 
         $user = $this->userManager->get($userId);
@@ -220,7 +220,7 @@ class CalendarController extends Controller {
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
-     * 
+     *
      * @param string $mxRoomId
      * @param string $displayName
      * @param string[] $userIds (optional)
@@ -237,7 +237,7 @@ class CalendarController extends Controller {
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
-     * 
+     *
      * @param string $userId
      * @param int $calendarId
      * @param string $mxRoomId
@@ -267,12 +267,12 @@ class CalendarController extends Controller {
         # sharing the calendar to avoid it appearing empty when its members are listed later
         $this->addUsersToGroup($groupId, $userIds, $ownerId);
         $add = [
-            array(
+            [
                 "href" => "principal:principals/groups/$groupId",
                 "commonName" => null,
                 "summary" => null,
                 "readOnly" => false,
-            )
+            ]
         ];
         try {
             $this->updateShares($calendarId, $add);
@@ -287,13 +287,13 @@ class CalendarController extends Controller {
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
-     * 
+     *
      * @param int[] $calendarIds
      * @param string $mxRoomId
      * @param bool $deleteGroup (optional)
      * @return JSONResponse
      */
-    public function unShare(array $calendarIds, string $mxRoomId, bool $deleteGroup = False) {
+    public function unShare(array $calendarIds, string $mxRoomId, bool $deleteGroup = false) {
         $groupId = $this->computeIdFromMxRoomId($mxRoomId);
         foreach ($calendarIds as $calendarId) {
             if ($this->getUserIdFromCalendarId($calendarId) === $this->userId) {
@@ -316,7 +316,7 @@ class CalendarController extends Controller {
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
-     * 
+     *
      * @param string $userId
      * @param string $mxRoomId
      * @param int[] $calendarIds
@@ -340,7 +340,7 @@ class CalendarController extends Controller {
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
-     * 
+     *
      * @param string $userId
      * @param string $mxRoomId
      * @return JSONResponse
@@ -354,7 +354,7 @@ class CalendarController extends Controller {
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
-     * 
+     *
      * @param int[] $calendarIds
      * @param string $mxRoomId
      * @param string $displayName
@@ -436,7 +436,7 @@ class CalendarController extends Controller {
             $this->logger->warning("calendar $calendarId no found, can't delete it");
             return;
         }
-        list($major,) = Util::getVersion();
+        [$major,] = Util::getVersion();
         if ($major > 21) {
             $this->caldav->deleteCalendar($calendarId, true);
         } else {
@@ -619,7 +619,7 @@ class CalendarController extends Controller {
             $this->logger->warning("calendar $calendarId no found, can't rename it for user $userId");
             return;
         }
-        list(, $ownerId) = Uri\split($calendar["principaluri"]);
+        [, $ownerId] = Uri\split($calendar["principaluri"]);
         # never rename a personal calendar other than those of the service account
         if ($ownerId === $userId and $ownerId !== $this->userId) {
             return;
@@ -647,7 +647,7 @@ class CalendarController extends Controller {
             return;
         }
         $principalUri = $calendar["principaluri"];
-        list(, $userId) = Uri\split($principalUri);
+        [, $userId] = Uri\split($principalUri);
         return $userId;
     }
 

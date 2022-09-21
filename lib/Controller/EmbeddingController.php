@@ -61,7 +61,7 @@ class EmbeddingController extends Controller {
      * @PublicPage
      * @NoCSRFRequired
      * @NoSameSiteCookieRequired
-     * 
+     *
      * @return TemplateResponse
      */
     public function embed() {

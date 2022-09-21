@@ -33,7 +33,6 @@ use OCP\IUser;
 use OC\KnownUser\KnownUserService;
 use OCA\DAV\CalDAV\CalDavBackend;
 use OCA\DAV\CalDAV\CalendarRoot;
-use OCA\DAV\Connector\LegacyDAVACL;
 use OCA\DAV\Connector\Sabre\Auth;
 use OCA\DAV\Connector\Sabre\ExceptionLoggerPlugin;
 use OCA\DAV\Connector\Sabre\MaintenancePlugin;
@@ -51,7 +50,7 @@ class Dav {
      * @return \Sabre\DAV\Server
      */
     public static function getServerInstance(IDBConnection $connection = null, IUser $user = null) {
-        list($major,) = \OCP\Util::getVersion();
+        [$major,] = \OCP\Util::getVersion();
 
         $authBackend = new Auth(
             \OC::$server->getSession(),
@@ -71,7 +70,7 @@ class Dav {
                 \OC::$server->query(\OCA\DAV\CalDAV\Proxy\ProxyMapper::class),
                 \OC::$server->get(KnownUserService::class),
                 \OC::$server->getConfig(),
-	            \OC::$server->get(\OCP\L10N\IFactory::class),
+                \OC::$server->get(\OCP\L10N\IFactory::class),
                 'principals/'
             );
         } else {

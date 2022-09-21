@@ -259,7 +259,7 @@ function postSelectedDocuments() {
 	window._.defer(() => {
 		const documents = OCA.Files.App.fileList.getSelectedFiles()
 		window.top.postMessage(documents, OC.appConfig.watcha?.origin || '')
-		console.debug('[watcha] selected documents++:', documents)
+		console.debug('[watcha] selected documents:', documents)
 	})
 }
 

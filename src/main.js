@@ -9,7 +9,7 @@
 
 'use strict'
 
-import { getRootUrl } from '@nextcloud/router'
+import { generateUrl } from '@nextcloud/router'
 
 /**
  *
@@ -17,9 +17,8 @@ import { getRootUrl } from '@nextcloud/router'
 function embed() {
 	const params = new URLSearchParams(window.parent.location.search)
 	const flavor = params.get('flavor')
-	const isCurrentChunck = chunck =>
-		new RegExp(`^${getRootUrl()}(/index.php)?/${chunck}`).test(window.location.pathname)
-	const isCurrentApp = appName => isCurrentChunck('apps/' + appName)
+	const routeStartsWith = chunck => window.location.pathname.startsWith(generateUrl(chunck))
+	const isCurrentApp = appName => routeStartsWith('apps/' + appName)
 	switch (flavor) {
 	case 'file-explorer':
 		console.debug('[watcha] embedding file-explorer')
@@ -36,7 +35,7 @@ function embed() {
 		} else if (isCurrentApp('tasks')) {
 			console.debug('[watcha] embedding tasks widget')
 			embedTasksWidget()
-		} else if (isCurrentChunck('s/[A-Za-z0-9]+?')) {
+		} else if (routeStartsWith('s/[A-Za-z0-9]+?')) {
 			console.debug('[watcha] embedding direct link files widget')
 			embedDirectLinkFilesWidget()
 		}
@@ -264,7 +263,7 @@ if (
 	// this window must be an iframe
 	window.self !== window.parent
 	// this window must be embedded by the Watcha connector for Nextcloud
-	&& window.parent.location.pathname === getRootUrl() + '/apps/watcha/embed'
+	&& window.parent.location.pathname === generateUrl('/apps/watcha/embed')
 ) {
 	embed()
 }

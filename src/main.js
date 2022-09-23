@@ -29,6 +29,9 @@ function embed() {
 		if (isCurrentApp('files')) {
 			console.debug('[watcha] embedding files widget')
 			embedFilesWidget()
+		} else if (isCurrentApp('onlyoffice')) {
+			console.debug('[watcha] embedding ONLYOFFICE widget')
+			embedOnlyofficeWidget()
 		} else if (isCurrentApp('calendar')) {
 			console.debug('[watcha] embedding calendar widget')
 			embedCalendarWidget()
@@ -86,6 +89,22 @@ function embedFilesWidget() {
         #app-navigation > ul > li:not(.pinned) {
             display: none !important;
         }`
+	_injectStyle(style)
+}
+
+/**
+ *
+ */
+function embedOnlyofficeWidget() {
+	const style = `
+		#header {
+			display: none !important;
+		}
+
+		#content {
+			padding-top: 0 !important;
+            height: 100% !important;
+		}`
 	_injectStyle(style)
 }
 

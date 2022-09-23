@@ -227,7 +227,7 @@ function _watchForBreadcrumb() {
  *
  */
 function _hideBreadcrumbAncestors() {
-	console.debug('[watcha] hidding breadcrumb')
+	console.debug('[watcha] hidding ancestors in the breadcrumb')
 	const ancestorSelector = '#controls > .breadcrumb > :is(.crumbmenu, .ui-droppable)'
 	const n = document.querySelectorAll(ancestorSelector).length
 	const style = `

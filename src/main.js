@@ -20,10 +20,10 @@ function embed() {
 	const routeStartsWith = chunck => window.location.pathname.startsWith(generateUrl(chunck))
 	const isCurrentApp = appName => routeStartsWith('apps/' + appName)
 	switch (flavor) {
-	case 'file-explorer':
-		console.debug('[watcha] embedding file-explorer')
+	case 'document-picker':
+		console.debug('[watcha] embedding document picker')
 		watchDocumentSelection()
-		embedFileExplorer()
+		embedDocumentPicker()
 		break
 	case 'widget':
 		if (isCurrentApp('files')) {
@@ -49,7 +49,7 @@ function embed() {
 /**
  *
  */
-function embedFileExplorer() {
+function embedDocumentPicker() {
 	_hideFilesToolbar()
 	const style = `
         #app-navigation,                /* left panel */

@@ -38,7 +38,7 @@ function embed() {
 		} else if (isCurrentApp('tasks')) {
 			console.debug('[watcha] embedding tasks widget')
 			embedTasksWidget()
-		} else if (routeStartsWith('s/[A-Za-z0-9]+?')) {
+		} else if (routeStartsWith('s/')) {
 			console.debug('[watcha] embedding direct link files widget')
 			embedDirectLinkFilesWidget()
 		}

@@ -132,21 +132,25 @@ function embedTasksWidget() {
  */
 function embedDirectLinkFilesWidget() {
 	const style = `
-        #header {
-            justify-content: center !important;
-            background-color: var(--color-main-background) !important;
-            background-image: none !important;
+		#header {
+			display: none !important;
+		}
+
+        #content {
+            padding-top: 0 !important;
+            height: 100% !important;
         }
 
-        #header > .header-left,
-        #header-secondary-action {
-            display: none !important;
+		#controls {
+			top: 0 !important;
+		}
+
+        #filestable > thead {
+            top: 44px !important;
         }
 
-        #header-primary-action > a {
-            background-color: rgb(0, 179, 179) !important;
-            border-color: rgb(0, 179, 179) !important;
-            border-radius: 8px !important;
+		#onlyofficeFrame {
+            height: 100% !important;
         }`
 	_injectStyle(style)
 }

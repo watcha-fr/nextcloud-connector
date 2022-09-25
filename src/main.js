@@ -77,6 +77,7 @@ function embedDocumentPicker() {
             pointer-events: none;
         }`
 	_injectStyle(style)
+	_showParentIframe()
 }
 
 /**
@@ -90,6 +91,12 @@ function embedFilesWidget() {
             display: none !important;
         }`
 	_injectStyle(style)
+	const params = new URLSearchParams(window.location.search)
+	if (params.has('openfile')) {
+		_watchForViewer()
+	} else {
+		_showParentIframe()
+	}
 }
 
 /**
@@ -106,6 +113,7 @@ function embedOnlyofficeWidget() {
             height: 100% !important;
 		}`
 	_injectStyle(style)
+	_showParentIframe()
 }
 
 /**
@@ -113,6 +121,7 @@ function embedOnlyofficeWidget() {
  */
 function embedCalendarWidget() {
 	_hideCalendarToolbar()
+	_showParentIframe()
 }
 
 /**
@@ -125,6 +134,7 @@ function embedTasksWidget() {
             top: 0 !important;
         }`
 	_injectStyle(style)
+	_showParentIframe()
 }
 
 /**
@@ -153,6 +163,7 @@ function embedDirectLinkFilesWidget() {
             height: 100% !important;
         }`
 	_injectStyle(style)
+	_showParentIframe()
 }
 
 /**
@@ -207,6 +218,7 @@ function _hideCalendarToolbar() {
  *
  */
 function _watchForBreadcrumb() {
+	console.debug('[watcha] watching for breadcrumb')
 	const controls = document.getElementById('controls')
 	controls.style.visibility = 'hidden'
 	const callback = mutationsList => {
@@ -224,7 +236,6 @@ function _watchForBreadcrumb() {
 	const observer = new MutationObserver(callback)
 	const config = { childList: true }
 	observer.observe(controls, config)
-	console.debug('[watcha] watching for breadcrumb')
 }
 
 /**
@@ -252,6 +263,37 @@ function _injectStyle(style) {
 	const element = document.createElement('style')
 	element.innerHTML = style
 	document.head.appendChild(element)
+}
+
+/**
+ *
+ */
+function _watchForViewer() {
+	console.debug('[watcha] watching for viewer')
+	const callback = mutationsList => {
+		for (const mutation of mutationsList) {
+			for (const node of mutation.addedNodes) {
+				if (node.id === 'viewer' && node.childNodes.length) {
+					console.debug('[watcha] viewer found')
+					observer.disconnect()
+					_showParentIframe()
+					return
+				}
+			}
+		}
+	}
+	const observer = new MutationObserver(callback)
+	const config = { childList: true }
+	observer.observe(document.body, config)
+}
+
+/**
+ *
+ */
+function _showParentIframe() {
+	console.debug('[watcha] showing parent iframe')
+	const iframe = window.parent.document.getElementById('embededIframe')
+	iframe.style.visibility = 'visible'
 }
 
 /**

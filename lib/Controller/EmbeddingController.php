@@ -65,8 +65,8 @@ class EmbeddingController extends Controller {
      * @return TemplateResponse
      */
     public function embed() {
-        Util::addStyle($this->appName, "embed");
-        Util::addScript($this->appName, "embed");
+        Util::addStyle($this->appName, "wrapper");
+        Util::addScript($this->appName, "wrapper");
 
         $response = new TemplateResponse($this->appName, "embed", [], TemplateResponse::RENDER_AS_BASE);
 

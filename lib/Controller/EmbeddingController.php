@@ -66,10 +66,9 @@ class EmbeddingController extends Controller {
      */
     public function embed() {
         Util::addStyle($this->appName, "embed");
+        Util::addScript($this->appName, "embed");
 
-        $url = $this->request->getParam("url");
-
-        $response = new TemplateResponse($this->appName, "embed", ["url" => $url], TemplateResponse::RENDER_AS_BASE);
+        $response = new TemplateResponse($this->appName, "embed", [], TemplateResponse::RENDER_AS_BASE);
 
         $oidcAppEnabled = $this->appManager->isInstalled("oidc_login");
         $oidcIssuerUrl = $this->config->getSystemValueString("oidc_login_provider_url");

@@ -52,7 +52,7 @@ class Application extends App implements IBootstrap {
     public function __construct(array $params = []) {
         parent::__construct(self::APP_ID, $params);
 
-        Util::addScript(self::APP_ID, "nextcloud-connector-main");
+        Util::addScript(self::APP_ID, "nextcloud-connector-embed");
     }
 
     /**

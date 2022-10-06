@@ -66,7 +66,7 @@ class EmbeddingController extends Controller {
      */
     public function embed() {
         Util::addStyle($this->appName, "wrapper");
-        Util::addScript($this->appName, "wrapper");
+        Util::addScript($this->appName, "nextcloud-connector-wrapper");
 
         $response = new TemplateResponse($this->appName, "wrapper", [], TemplateResponse::RENDER_AS_BASE);
 

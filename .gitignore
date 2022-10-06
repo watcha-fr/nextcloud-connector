@@ -1,7 +1,5 @@
-.idea
-*.iml
 /.php_cs.cache
 /build/
+/js/
 /vendor/
-js/*hot-update.*
-node_modules/
+/node_modules/

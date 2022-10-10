@@ -24,8 +24,7 @@
 
 function refine() {
     const params = new URLSearchParams(window.location.search);
-    if (params.has("watcha_widget") || window.name === "watcha") {
-        window.name = "watcha";
+    if (window.self !== window.top) {
         refineWidget();
     }
     if (params.has("watcha_doc-selector")) {

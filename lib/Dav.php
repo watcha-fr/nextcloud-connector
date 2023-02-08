@@ -4,8 +4,16 @@ declare(strict_types=1);
 
 /**
  * @copyright Copyright (c) 2021, Watcha <contact@watcha.fr>
+ * @copyright Copyright (c) 2016, ownCloud, Inc.
  *
  * @author Charlie Calendre <c-cal@watcha.fr>
+ * @author Christoph Wurst <christoph@winzerhof-wurst.at>
+ * @author Georg Ehrke <oc.list@georgehrke.com>
+ * @author Joas Schilling <coding@schilljs.com>
+ * @author Lukas Reschke <lukas@statuscode.ch>
+ * @author Morris Jobke <hey@morrisjobke.de>
+ * @author Thomas Citharel <nextcloud@tcit.fr>
+ * @author Thomas Müller <thomas.mueller@tmit.eu>
  *
  * @license GNU AGPL version 3 or any later version
  *
@@ -26,19 +34,22 @@ declare(strict_types=1);
 
 namespace OCA\Watcha;
 
+use OCA\DAV\DAV\CustomPropertiesBackend;
 use OCP\IDBConnection;
 use OCP\IUser;
 
+// <apps/dav/appinfo/v1/caldav.php>
 // Backends
 use OC\KnownUser\KnownUserService;
 use OCA\DAV\CalDAV\CalDavBackend;
-use OCA\DAV\CalDAV\CalendarRoot;
 use OCA\DAV\Connector\LegacyDAVACL;
+use OCA\DAV\CalDAV\CalendarRoot;
 use OCA\DAV\Connector\Sabre\Auth;
 use OCA\DAV\Connector\Sabre\ExceptionLoggerPlugin;
 use OCA\DAV\Connector\Sabre\MaintenancePlugin;
 use OCA\DAV\Connector\Sabre\Principal;
-use OCA\DAV\DAV\CustomPropertiesBackend;
+use Psr\Log\LoggerInterface;
+// </apps/dav/appinfo/v1/caldav.php>
 
 /**
  * Sabre DAV Server
@@ -51,8 +62,9 @@ class Dav {
      * @return \Sabre\DAV\Server
      */
     public static function getServerInstance(IDBConnection $connection = null, IUser $user = null) {
-        list($major,) = \OCP\Util::getVersion();
+        $baseuri = \OC::$WEBROOT . '/remote.php/dav/';
 
+        // <apps/dav/appinfo/v1/caldav.php>
         $authBackend = new Auth(
             \OC::$server->getSession(),
             \OC::$server->getUserSession(),
@@ -61,56 +73,38 @@ class Dav {
             \OC::$server->getBruteForceThrottler(),
             'principals/'
         );
-        if ($major > 22) {
-            $principalBackend = new Principal(
-                \OC::$server->getUserManager(),
-                \OC::$server->getGroupManager(),
-                \OC::$server->getShareManager(),
-                \OC::$server->getUserSession(),
-                \OC::$server->getAppManager(),
-                \OC::$server->query(\OCA\DAV\CalDAV\Proxy\ProxyMapper::class),
-                \OC::$server->get(KnownUserService::class),
-                \OC::$server->getConfig(),
-	            \OC::$server->get(\OCP\L10N\IFactory::class),
-                'principals/'
-            );
-        } else {
-            $principalBackend = new Principal(
-                \OC::$server->getUserManager(),
-                \OC::$server->getGroupManager(),
-                \OC::$server->getShareManager(),
-                \OC::$server->getUserSession(),
-                \OC::$server->getAppManager(),
-                \OC::$server->query(\OCA\DAV\CalDAV\Proxy\ProxyMapper::class),
-                \OC::$server->get(KnownUserService::class),
-                \OC::$server->getConfig(),
-                'principals/'
-            );
-        }
+        $principalBackend = new Principal(
+            \OC::$server->getUserManager(),
+            \OC::$server->getGroupManager(),
+            \OC::$server->getShareManager(),
+            \OC::$server->getUserSession(),
+            \OC::$server->getAppManager(),
+            \OC::$server->query(\OCA\DAV\CalDAV\Proxy\ProxyMapper::class),
+            \OC::$server->get(KnownUserService::class),
+            \OC::$server->getConfig(),
+            \OC::$server->getL10NFactory(),
+            'principals/'
+        );
         $db = \OC::$server->getDatabaseConnection();
         $userManager = \OC::$server->getUserManager();
         $random = \OC::$server->getSecureRandom();
         $logger = \OC::$server->getLogger();
         $dispatcher = \OC::$server->get(\OCP\EventDispatcher\IEventDispatcher::class);
         $legacyDispatcher = \OC::$server->getEventDispatcher();
+        $config = \OC::$server->get(\OCP\IConfig::class);
 
-        if ($major > 21) {
-            $config = \OC::$server->get(\OCP\IConfig::class);
-            $calDavBackend = new CalDavBackend(
-                $db,
-                $principalBackend,
-                $userManager,
-                \OC::$server->getGroupManager(),
-                $random,
-                $logger,
-                $dispatcher,
-                $legacyDispatcher,
-                $config,
-                false
-            );
-        } else {
-            $calDavBackend = new CalDavBackend($db, $principalBackend, $userManager, \OC::$server->getGroupManager(), $random, $logger, $dispatcher, $legacyDispatcher, false);
-        }
+        $calDavBackend = new CalDavBackend(
+            $db,
+            $principalBackend,
+            $userManager,
+            \OC::$server->getGroupManager(),
+            $random,
+            $logger,
+            $dispatcher,
+            $legacyDispatcher,
+            $config,
+            false
+        );
 
         $debugging = \OC::$server->getConfig()->getSystemValue('debug', false);
         $sendInvitations = \OC::$server->getConfig()->getAppValue('dav', 'sendInvitations', 'yes') === 'yes';
@@ -119,7 +113,7 @@ class Dav {
         $principalCollection = new \Sabre\CalDAV\Principal\Collection($principalBackend);
         $principalCollection->disableListing = !$debugging; // Disable listing
 
-        $addressBookRoot = new CalendarRoot($principalBackend, $calDavBackend);
+        $addressBookRoot = new CalendarRoot($principalBackend, $calDavBackend, 'principals', \OC::$server->get(LoggerInterface::class));
         $addressBookRoot->disableListing = !$debugging; // Disable listing
 
         $nodes = [
@@ -131,9 +125,6 @@ class Dav {
         $server = new \Sabre\DAV\Server($nodes);
         $server::$exposeVersion = false;
         $server->httpRequest->setUrl(\OC::$server->getRequest()->getRequestUri());
-
-        $baseuri = \OC::$WEBROOT . '/remote.php/dav/';
-
         $server->setBaseUri($baseuri);
 
         // Add plugins
@@ -141,6 +132,9 @@ class Dav {
         $server->addPlugin(new \Sabre\DAV\Auth\Plugin($authBackend, 'ownCloud'));
         $server->addPlugin(new \Sabre\CalDAV\Plugin());
 
+        /* watcha! causes "Node with name 'xxx' could not be found"
+        $server->addPlugin(new LegacyDAVACL());
+        !watcha */
         if ($debugging) {
             $server->addPlugin(new \Sabre\DAV\Browser\Plugin());
         }
@@ -153,6 +147,7 @@ class Dav {
             $server->addPlugin(\OC::$server->query(\OCA\DAV\CalDAV\Schedule\IMipPlugin::class));
         }
         $server->addPlugin(new ExceptionLoggerPlugin('caldav', \OC::$server->getLogger()));
+        // </apps/dav/appinfo/v1/caldav.php>
 
         if ($connection && $user) {
             $server->addPlugin(

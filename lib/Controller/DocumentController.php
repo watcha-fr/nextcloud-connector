@@ -97,6 +97,7 @@ class DocumentController extends ShareAPIController {
      * @param string $sendPasswordByTalk
      * @param string $expireDate
      * @param string $label
+	 * @param string $attributes
      *
      * @return DataResponse
      * @throws NotFoundException
@@ -116,9 +117,12 @@ class DocumentController extends ShareAPIController {
         string $password = '',
         string $sendPasswordByTalk = null,
         string $expireDate = '',
-        string $label = ''
+        string $note = '',
+        string $label = '',
+		string $attributes = null
     ): DataResponse {
         $this->logger->info("document at $path shared with $shareWith");
+
         return parent::createShare(
             $path,
             $permissions,
@@ -128,7 +132,9 @@ class DocumentController extends ShareAPIController {
             $password,
             $sendPasswordByTalk,
             $expireDate,
-            $label
+            $note,
+            $label,
+            $attributes
         );
     }
 

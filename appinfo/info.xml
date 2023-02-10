@@ -6,7 +6,7 @@
     <summary lang="fr">Connecteur Watcha</summary>
     <description lang="en">This connector allows the integration of the document sharing, calendars and tasks features of Nextcloud in [Watcha](https://watcha.fr). It is thus possible to link the resources of these applications to Watcha rooms thanks to Nextcloud groups.</description>
     <description lang="fr">Ce connecteur permet l'intégration des fonctionnalités de partage de documents, de calendriers et de tâches de Nextcloud dans [Watcha](https://watcha.fr). Il est ainsi possible de lier les ressources de ces application aux salons Watcha grâce aux groupes Nextcloud.</description>
-    <version>0.3.0</version>
+    <version>0.4.0</version>
     <licence>agpl</licence>
     <author homepage="https://github.com/watcha-fr">Charlie Calendre</author>
     <namespace>Watcha</namespace>
@@ -20,6 +20,6 @@
     <screenshot small-thumbnail="https://raw.githubusercontent.com/watcha-fr/nextcloud-connector/master/screenshots/watcha2-thumbnail.png">https://raw.githubusercontent.com/watcha.fr/nextcloud-connector/master/screenshots/watcha2.png</screenshot>
 
     <dependencies>
-        <nextcloud min-version="23" max-version="24.0.9"/>
+        <nextcloud min-version="25" max-version="25.0.3"/>
     </dependencies>
 </info>

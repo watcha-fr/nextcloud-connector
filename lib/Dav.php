@@ -48,6 +48,7 @@ use OCA\DAV\Connector\Sabre\Auth;
 use OCA\DAV\Connector\Sabre\ExceptionLoggerPlugin;
 use OCA\DAV\Connector\Sabre\MaintenancePlugin;
 use OCA\DAV\Connector\Sabre\Principal;
+use OCP\Accounts\IAccountManager;
 use Psr\Log\LoggerInterface;
 // </apps/dav/appinfo/v1/caldav.php>
 
@@ -76,6 +77,7 @@ class Dav {
         $principalBackend = new Principal(
             \OC::$server->getUserManager(),
             \OC::$server->getGroupManager(),
+            \OC::$server->get(IAccountManager::class),
             \OC::$server->getShareManager(),
             \OC::$server->getUserSession(),
             \OC::$server->getAppManager(),
@@ -88,9 +90,8 @@ class Dav {
         $db = \OC::$server->getDatabaseConnection();
         $userManager = \OC::$server->getUserManager();
         $random = \OC::$server->getSecureRandom();
-        $logger = \OC::$server->getLogger();
+        $logger = \OC::$server->get(LoggerInterface::class);
         $dispatcher = \OC::$server->get(\OCP\EventDispatcher\IEventDispatcher::class);
-        $legacyDispatcher = \OC::$server->getEventDispatcher();
         $config = \OC::$server->get(\OCP\IConfig::class);
 
         $calDavBackend = new CalDavBackend(
@@ -101,9 +102,10 @@ class Dav {
             $random,
             $logger,
             $dispatcher,
-            $legacyDispatcher,
             $config,
-            false
+            /* watcha! default: false
+            true
+            !watcha */
         );
 
         $debugging = \OC::$server->getConfig()->getSystemValue('debug', false);
@@ -113,7 +115,7 @@ class Dav {
         $principalCollection = new \Sabre\CalDAV\Principal\Collection($principalBackend);
         $principalCollection->disableListing = !$debugging; // Disable listing
 
-        $addressBookRoot = new CalendarRoot($principalBackend, $calDavBackend, 'principals', \OC::$server->get(LoggerInterface::class));
+        $addressBookRoot = new CalendarRoot($principalBackend, $calDavBackend, 'principals', $logger);
         $addressBookRoot->disableListing = !$debugging; // Disable listing
 
         $nodes = [
@@ -129,13 +131,16 @@ class Dav {
 
         // Add plugins
         $server->addPlugin(new MaintenancePlugin(\OC::$server->getConfig(), \OC::$server->getL10N('dav')));
-        $server->addPlugin(new \Sabre\DAV\Auth\Plugin($authBackend, 'ownCloud'));
+        $server->addPlugin(new \Sabre\DAV\Auth\Plugin($authBackend));
         $server->addPlugin(new \Sabre\CalDAV\Plugin());
 
         /* watcha! causes "Node with name 'xxx' could not be found"
         $server->addPlugin(new LegacyDAVACL());
         !watcha */
         if ($debugging) {
+            /* watcha! causes "Class \"OCA\\Watcha\\Sabre\\DAV\\Browser\\Plugin\" not found""
+            $server->addPlugin(new Sabre\DAV\Browser\Plugin());
+            !watcha */
             $server->addPlugin(new \Sabre\DAV\Browser\Plugin());
         }
 
@@ -146,7 +151,7 @@ class Dav {
         if ($sendInvitations) {
             $server->addPlugin(\OC::$server->query(\OCA\DAV\CalDAV\Schedule\IMipPlugin::class));
         }
-        $server->addPlugin(new ExceptionLoggerPlugin('caldav', \OC::$server->getLogger()));
+        $server->addPlugin(new ExceptionLoggerPlugin('caldav', $logger));
         // </apps/dav/appinfo/v1/caldav.php>
 
         if ($connection && $user) {

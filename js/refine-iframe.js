@@ -35,17 +35,22 @@ function refine() {
 function refineWidget() {
     const style = `
         #header,
-        #filelist-header {
+        .filelist-header {
             display: none !important;
         }
 
-        #body-user {
+        #body-user,
+        #app-navigation-vue {
             height: 100% !important;
         }
 
         #content,
-        #content-vue {
+        #content-vue,
+        #app-navigation {
             padding-top: 0 !important;
+            margin-top: 0 !important;
+            height: 100% !important;
+            border-radius: 0 !important;
         }
 
         #app-navigation,
@@ -65,13 +70,18 @@ function refineDocumentSelector() {
     const style = `
         .app-sidebar,
         #app-sidebar,
+        #app-navigation-toggle,
         #view-toggle,
-        #headerSelection,
         #headerSize,
+        .column-selection,
         .selection,
         .fileactions,
         .filesize {
             display: none !important;
+        }
+
+        .files-controls {
+            padding-left: 0 !important;
         }
         
         #app-content {

@@ -34,6 +34,7 @@ use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\OCS\OCSForbiddenException;
 use OCP\Files\IRootFolder;
 use OCP\IConfig;
+use OCP\IDateTimeZone;
 use OCP\IGroupManager;
 use OCP\IL10N;
 use OCP\IPreview;
@@ -63,6 +64,7 @@ class DocumentController extends ShareAPIController {
         IServerContainer $serverContainer,
         IUserStatusManager $userStatusManager,
         IPreview $previewManager,
+        private IDateTimeZone $dateTimeZone,
         LoggerInterface $logger
     ) {
         parent::__construct(
@@ -79,7 +81,8 @@ class DocumentController extends ShareAPIController {
             $appManager,
             $serverContainer,
             $userStatusManager,
-            $previewManager
+            $previewManager,
+            $dateTimeZone
         );
         $this->logger = $logger;
     }

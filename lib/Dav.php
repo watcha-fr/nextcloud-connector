@@ -146,7 +146,7 @@ class Dav {
 
         $server->addPlugin(new \Sabre\DAV\Sync\Plugin());
         $server->addPlugin(new \Sabre\CalDAV\ICSExportPlugin());
-        $server->addPlugin(new \OCA\DAV\CalDAV\Schedule\Plugin(\OC::$server->getConfig()));
+        $server->addPlugin(new \OCA\DAV\CalDAV\Schedule\Plugin(\OC::$server->getConfig(), $logger));
 
         if ($sendInvitations) {
             $server->addPlugin(\OC::$server->query(\OCA\DAV\CalDAV\Schedule\IMipPlugin::class));

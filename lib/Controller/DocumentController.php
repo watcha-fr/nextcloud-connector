@@ -75,14 +75,15 @@ class DocumentController extends ShareAPIController {
             $userManager,
             $rootFolder,
             $urlGenerator,
-            $request->getParam("requester"), // the user who made the sharing request (not the service account)
             $l10n,
             $config,
             $appManager,
             $serverContainer,
             $userStatusManager,
             $previewManager,
-            $dateTimeZone
+            $dateTimeZone,
+            $logger,
+            $request->getParam("requester")
         );
         $this->logger = $logger;
     }

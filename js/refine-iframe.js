@@ -47,7 +47,7 @@ function refineWidget() {
         #content,
         #content-vue,
         #app-navigation {
-            padding-top: 0 !important;
+            padding-top: 50px !important;
             margin-top: 0 !important;
             height: 100% !important;
             border-radius: 0 !important;

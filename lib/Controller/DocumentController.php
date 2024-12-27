@@ -120,7 +120,7 @@ class DocumentController extends ShareAPIController {
         string $publicUpload = 'false',
         string $password = '',
         string $sendPasswordByTalk = null,
-        string $expireDate = '',
+        string $expireDate = null,
         string $note = '',
         string $label = '',
 		string $attributes = null

@@ -34,7 +34,24 @@ function refine() {
 
 function refineWidget() {
     const style = `
-        #header,
+        #header {
+            display: block !important;
+        }
+
+        .header-left {
+            visibility: hidden !important;
+            width: 200px !important;
+        }
+
+        .header-right {
+            position: absolute !important;
+            right: 0;
+        }
+        
+        .header-right > :not(:first-child) {
+            display: none !important;
+        }
+
         .filelist-header {
             display: none !important;
         }

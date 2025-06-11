@@ -117,13 +117,13 @@ class DocumentController extends ShareAPIController {
         int $permissions = null,
         int $shareType = -1,
         string $shareWith = null,
-        string $publicUpload = 'false',
+        string $publicUpload = null,
         string $password = '',
-        string $sendPasswordByTalk = null,
-        string $expireDate = null,
+        ?string $sendPasswordByTalk = null,
+        ?string $expireDate = null,
         string $note = '',
         string $label = '',
-		string $attributes = null
+        string $attributes = null
     ): DataResponse {
         $this->logger->info("document at $path shared with $shareWith");
 

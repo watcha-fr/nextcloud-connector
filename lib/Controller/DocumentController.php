@@ -44,6 +44,11 @@ use OCP\IURLGenerator;
 use OCP\IUserManager;
 use OCP\Share\IManager;
 use OCP\UserStatus\IManager as IUserStatusManager;
+use OCP\Mail\IMailer;
+use OCP\Share\IProviderFactory;
+use OCP\ITagManager;
+use Psr\Container\ContainerInterface;
+use OCA\Federation\TrustedServers;
 
 class DocumentController extends ShareAPIController {
 
@@ -65,8 +70,14 @@ class DocumentController extends ShareAPIController {
         IUserStatusManager $userStatusManager,
         IPreview $previewManager,
         private IDateTimeZone $dateTimeZone,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        IProviderFactory $factory,
+        IMailer $mailer,
+        ITagManager $tagManager,
+        ?TrustedServers $trustedServers,
+        ?string $userId = null,
     ) {
+        $requester = $request->getParam("requester");
         parent::__construct(
             $appName,
             $request,
@@ -83,7 +94,11 @@ class DocumentController extends ShareAPIController {
             $previewManager,
             $dateTimeZone,
             $logger,
-            $request->getParam("requester")
+            $factory,
+            $mailer,
+            $tagManager,
+            $trustedServers,
+            $requester,
         );
         $this->logger = $logger;
     }
@@ -113,19 +128,21 @@ class DocumentController extends ShareAPIController {
      * @suppress PhanUndeclaredClassMethod
      */
     public function createShare(
-        string $path = null,
-        int $permissions = null,
+        ?string $path = null,
+        ?int $permissions = null,
         int $shareType = -1,
-        string $shareWith = null,
-        string $publicUpload = null,
+        ?string $shareWith = null,
+        ?string $publicUpload = null,
         string $password = '',
         ?string $sendPasswordByTalk = null,
         ?string $expireDate = null,
         string $note = '',
         string $label = '',
-        string $attributes = null
+        ?string $attributes = null
+        ?string $sendMail = null
     ): DataResponse {
         $this->logger->info("document at $path shared with $shareWith");
+        $this->userId = $this->request->getParam('requester');
 
         return parent::createShare(
             $path,
@@ -138,7 +155,8 @@ class DocumentController extends ShareAPIController {
             $expireDate,
             $note,
             $label,
-            $attributes
+            $attributes,
+            $sendMail
         );
     }
 

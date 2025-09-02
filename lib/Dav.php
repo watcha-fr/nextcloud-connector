@@ -50,6 +50,8 @@ use OCA\DAV\Connector\Sabre\MaintenancePlugin;
 use OCA\DAV\Connector\Sabre\Principal;
 use OCP\Accounts\IAccountManager;
 use Psr\Log\LoggerInterface;
+use OCA\DAV\CalDAV\Sharing\Backend as CalendarSharingBackend;
+use OCA\DAV\CalDAV\DefaultCalendarValidator;
 // </apps/dav/appinfo/v1/caldav.php>
 
 /**
@@ -93,16 +95,17 @@ class Dav {
         $logger = \OC::$server->get(LoggerInterface::class);
         $dispatcher = \OC::$server->get(\OCP\EventDispatcher\IEventDispatcher::class);
         $config = \OC::$server->get(\OCP\IConfig::class);
+        $calendarSharingBackend = \OC::$server->get(CalendarSharingBackend::class); //dla+
 
         $calDavBackend = new CalDavBackend(
             $db,
             $principalBackend,
             $userManager,
-            \OC::$server->getGroupManager(),
             $random,
             $logger,
             $dispatcher,
             $config,
+            $calendarSharingBackend,
             /* watcha! default: false
             true
             !watcha */
@@ -144,9 +147,10 @@ class Dav {
             $server->addPlugin(new \Sabre\DAV\Browser\Plugin());
         }
 
+        $defaultCalendarValidator = \OC::$server->get(DefaultCalendarValidator::class);
         $server->addPlugin(new \Sabre\DAV\Sync\Plugin());
         $server->addPlugin(new \Sabre\CalDAV\ICSExportPlugin());
-        $server->addPlugin(new \OCA\DAV\CalDAV\Schedule\Plugin(\OC::$server->getConfig(), $logger));
+        $server->addPlugin(new \OCA\DAV\CalDAV\Schedule\Plugin(\OC::$server->getConfig(), $logger, $defaultCalendarValidator));
 
         if ($sendInvitations) {
             $server->addPlugin(\OC::$server->query(\OCA\DAV\CalDAV\Schedule\IMipPlugin::class));
@@ -158,9 +162,11 @@ class Dav {
             $server->addPlugin(
                 new \Sabre\DAV\PropertyStorage\Plugin(
                     new CustomPropertiesBackend(
+                        $server,
                         $server->tree,
                         $connection,
-                        $user
+                        $user,
+                        $defaultCalendarValidator,
                     )
                 )
             );

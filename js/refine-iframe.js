@@ -38,17 +38,17 @@ function refineWidget() {
             display: block !important;
         }
 
-        .header-left {
+        .header-start {
             visibility: hidden !important;
             width: 200px !important;
         }
 
-        .header-right {
+        .header-end {
             position: absolute !important;
             right: 0;
         }
         
-        .header-right > :not(:first-child) {
+        .header-end > :not(:first-child) {
             display: none !important;
         }
 

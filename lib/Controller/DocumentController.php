@@ -138,7 +138,7 @@ class DocumentController extends ShareAPIController {
         ?string $expireDate = null,
         string $note = '',
         string $label = '',
-        ?string $attributes = null
+        ?string $attributes = null,
         ?string $sendMail = null
     ): DataResponse {
         $this->logger->info("document at $path shared with $shareWith");

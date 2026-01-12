@@ -34,6 +34,7 @@ use OCP\AppFramework\Http\DataResponse;
 use OCP\AppFramework\OCS\OCSForbiddenException;
 use OCP\Files\IRootFolder;
 use OCP\IConfig;
+use OCP\IAppConfig;
 use OCP\IDateTimeZone;
 use OCP\IGroupManager;
 use OCP\IL10N;
@@ -65,6 +66,7 @@ class DocumentController extends ShareAPIController {
         IURLGenerator $urlGenerator,
         IL10N $l10n,
         IConfig $config,
+        IAppConfig $appConfig,
         IAppManager $appManager,
         IServerContainer $serverContainer,
         IUserStatusManager $userStatusManager,
@@ -88,6 +90,7 @@ class DocumentController extends ShareAPIController {
             $urlGenerator,
             $l10n,
             $config,
+            $appConfig,
             $appManager,
             $serverContainer,
             $userStatusManager,

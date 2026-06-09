@@ -199,11 +199,11 @@ class CalendarController extends Controller {
             }
         }
 
-        foreach ($ocProperties as $propertie) {
+        foreach ($ocProperties as $path => $propertie) {
             if (!isset($propertie["calendar"])) {
-                $this->logger->warning("Missing calendar for property path: $path");
+                $this->logger->debug("Missing calendar for property path: $path");
                 continue;
-            } 
+            }
             $order = $propertie["order"];
             $calendar = $propertie["calendar"];
             array_splice($orderedCalendars, $order, 0, array($calendar));

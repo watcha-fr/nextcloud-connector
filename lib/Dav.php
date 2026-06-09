@@ -51,7 +51,9 @@ use OCA\DAV\Connector\Sabre\Principal;
 use OCP\Accounts\IAccountManager;
 use Psr\Log\LoggerInterface;
 use OCA\DAV\CalDAV\Sharing\Backend as CalendarSharingBackend;
+use OCP\L10N\IFactory as IL10NFactory;
 use OCA\DAV\CalDAV\DefaultCalendarValidator;
+use OCA\DAV\Db\PropertyMapper;
 // </apps/dav/appinfo/v1/caldav.php>
 
 /**
@@ -72,15 +74,15 @@ class Dav {
             \OC::$server->getSession(),
             \OC::$server->getUserSession(),
             \OC::$server->getRequest(),
-            \OC::$server->getTwoFactorAuthManager(),
-            \OC::$server->getBruteForceThrottler(),
+            \OC::$server->get(\OC\Authentication\TwoFactorAuth\Manager::class),
+            \OC::$server->query(\OCP\Security\Bruteforce\IThrottler::class),
             'principals/'
         );
         $principalBackend = new Principal(
             \OC::$server->getUserManager(),
             \OC::$server->getGroupManager(),
             \OC::$server->get(IAccountManager::class),
-            \OC::$server->getShareManager(),
+            \OC::$server->query(\OCP\Share\IManager::class),
             \OC::$server->getUserSession(),
             \OC::$server->getAppManager(),
             \OC::$server->query(\OCA\DAV\CalDAV\Proxy\ProxyMapper::class),
@@ -96,6 +98,9 @@ class Dav {
         $dispatcher = \OC::$server->get(\OCP\EventDispatcher\IEventDispatcher::class);
         $config = \OC::$server->get(\OCP\IConfig::class);
         $calendarSharingBackend = \OC::$server->get(CalendarSharingBackend::class); //dla+
+        $l10nFactory = \OC::$server->get(IL10NFactory::class);
+        $davL10n = $l10nFactory->get('dav');
+        $federatedCalendarFactory = \OC::$server->get(\OCA\DAV\CalDAV\Federation\FederatedCalendarFactory::class);
 
         $calDavBackend = new CalDavBackend(
             $db,
@@ -106,6 +111,9 @@ class Dav {
             $dispatcher,
             $config,
             $calendarSharingBackend,
+            \OC::$server->get(\OCA\DAV\CalDAV\Federation\FederatedCalendarMapper::class),
+            \OC::$server->get(\OCP\ICacheFactory::class),
+
             /* watcha! default: false
             true
             !watcha */
@@ -118,7 +126,7 @@ class Dav {
         $principalCollection = new \Sabre\CalDAV\Principal\Collection($principalBackend);
         $principalCollection->disableListing = !$debugging; // Disable listing
 
-        $addressBookRoot = new CalendarRoot($principalBackend, $calDavBackend, 'principals', $logger);
+        $addressBookRoot = new CalendarRoot($principalBackend, $calDavBackend, 'principals', $logger, $davL10n, $config, $federatedCalendarFactory);
         $addressBookRoot->disableListing = !$debugging; // Disable listing
 
         $nodes = [
@@ -166,6 +174,7 @@ class Dav {
                         $server->tree,
                         $connection,
                         $user,
+                        \OC::$server->get(PropertyMapper::class),
                         $defaultCalendarValidator,
                     )
                 )

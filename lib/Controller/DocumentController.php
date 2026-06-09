@@ -2,28 +2,6 @@
 
 declare(strict_types=1);
 
-/**
- * @copyright Copyright (c) 2021, Watcha <contact@watcha.fr>
- *
- * @author Charlie Calendre <c-cal@watcha.fr>
- *
- * @license GNU AGPL version 3 or any later version
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- */
-
 namespace OCA\Watcha\Controller;
 
 use Psr\Log\LoggerInterface;
@@ -44,17 +22,20 @@ use OCP\IServerContainer;
 use OCP\IURLGenerator;
 use OCP\IUserManager;
 use OCP\Share\IManager;
+use OCP\Share\IShare;
 use OCP\UserStatus\IManager as IUserStatusManager;
 use OCP\Mail\IMailer;
+use OCP\Mail\IEmailValidator;
 use OCP\Share\IProviderFactory;
 use OCP\ITagManager;
-use Psr\Container\ContainerInterface;
 use OCA\Federation\TrustedServers;
 
 class DocumentController extends ShareAPIController {
 
-    /** @var LoggerInterface */
-    private $logger;
+    private LoggerInterface $logger;
+    private IManager $shareManager;
+    private IGroupManager $groupManager;
+    private IRootFolder $rootFolder;
 
     public function __construct(
         string $appName,
@@ -76,6 +57,7 @@ class DocumentController extends ShareAPIController {
         IProviderFactory $factory,
         IMailer $mailer,
         ITagManager $tagManager,
+        IEmailValidator $emailValidator,
         ?TrustedServers $trustedServers,
         ?string $userId = null,
     ) {
@@ -100,35 +82,19 @@ class DocumentController extends ShareAPIController {
             $factory,
             $mailer,
             $tagManager,
+            $emailValidator,
             $trustedServers,
             $requester,
         );
         $this->logger = $logger;
+        $this->shareManager = $shareManager;
+        $this->groupManager = $groupManager;
+        $this->rootFolder = $rootFolder;
     }
 
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
-     *
-     * @param string $path
-     * @param int $permissions
-     * @param int $shareType
-     * @param string $shareWith
-     * @param string $publicUpload
-     * @param string $password
-     * @param string $sendPasswordByTalk
-     * @param string $expireDate
-     * @param string $label
-	 * @param string $attributes
-     *
-     * @return DataResponse
-     * @throws NotFoundException
-     * @throws OCSBadRequestException
-     * @throws OCSException
-     * @throws OCSForbiddenException
-     * @throws OCSNotFoundException
-     * @throws InvalidPathException
-     * @suppress PhanUndeclaredClassMethod
      */
     public function createShare(
         ?string $path = null,
@@ -144,10 +110,11 @@ class DocumentController extends ShareAPIController {
         ?string $attributes = null,
         ?string $sendMail = null
     ): DataResponse {
+        $requester = $this->request->getParam('requester');
         $this->logger->info("document at $path shared with $shareWith");
-        $this->userId = $this->request->getParam('requester');
+        $this->userId = $requester;
 
-        return parent::createShare(
+        $response = parent::createShare(
             $path,
             $permissions,
             $shareType,
@@ -161,15 +128,37 @@ class DocumentController extends ShareAPIController {
             $attributes,
             $sendMail
         );
+
+        $responseData = $response->getData();
+        if (isset($responseData['id']) && $shareWith !== null) {
+            $shareId = $responseData['id'];
+            $group = $this->groupManager->get($shareWith);
+            if ($group !== null) {
+                foreach ($group->getUsers() as $user) {
+                    $uid = $user->getUID();
+                    try {
+                        $userShare = $this->shareManager->getShareById(
+                            'ocinternal:' . $shareId,
+                            $uid
+                        );
+                        if ($userShare->getStatus() === IShare::STATUS_PENDING) {
+                            $this->shareManager->acceptShare($userShare, $uid);
+                            $this->rootFolder->getUserFolder($uid)->getDirectoryListing();
+                            $this->logger->info("Auto-accepted share $shareId for user $uid");
+                        }
+                    } catch (\Exception $e) {
+                        $this->logger->warning("Failed to auto-accept share $shareId for user $uid: " . $e->getMessage());
+                    }
+                }
+            }
+        }
+
+        return $response;
     }
 
     /**
      * @NoAdminRequired
      * @NoCSRFRequired
-     *
-     * @param string $id
-     * @return DataResponse
-     * @throws OCSNotFoundException
      */
     public function deleteShare(string $id): DataResponse {
         $this->logger->info("document sharing $id deleted");

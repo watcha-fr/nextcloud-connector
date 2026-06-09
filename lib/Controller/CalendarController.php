@@ -167,7 +167,7 @@ class CalendarController extends Controller {
             ->andWhere($query->expr()->eq("propertyname",  $query->createNamedParameter(CALENDAR_ORDER_KEY)))
             ->orderBy("propertyvalue", "ASC");
 
-        $cursor = $query->execute();
+        $cursor = $query->executeQuery();
 
         $ocProperties = array();
 

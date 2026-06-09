@@ -186,6 +186,9 @@ class CalendarController extends Controller {
         $orderedCalendars = array();
 
         foreach ($calendars as $calendar) {
+            if (!empty($calendar['{http://nextcloud.com/ns}deleted-at'])) {
+                continue;
+            } 
             $owner = $calendar[OWNER_PRINCIPAL_KEY];
             $uri = $calendar["uri"];
             $path = "calendars/$userId/$uri";
@@ -197,6 +200,10 @@ class CalendarController extends Controller {
         }
 
         foreach ($ocProperties as $propertie) {
+            if (!isset($propertie["calendar"])) {
+                $this->logger->warning("Missing calendar for property path: $path");
+                continue;
+            } 
             $order = $propertie["order"];
             $calendar = $propertie["calendar"];
             array_splice($orderedCalendars, $order, 0, array($calendar));

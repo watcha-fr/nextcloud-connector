@@ -22,6 +22,12 @@
 
 "use strict";
 
+// Query param used by Watcha to flag a top-level "warm-up" window whose only
+// purpose is to establish the Nextcloud SSO session (cf. Watcha DocumentPanel).
+const WARMUP_PARAM = "watcha_warmup";
+const WARMUP_MESSAGE = "watcha_warmup-ok";
+const WIDGET_READY_MESSAGE = "watcha_widget-ready";
+
 function refine() {
     const params = new URLSearchParams(window.location.search);
     if (window.self !== window.top) {
@@ -30,6 +36,26 @@ function refine() {
     if (params.has("watcha_doc-selector")) {
         refineDocumentSelector();
     }
+}
+
+/**
+ * When Watcha opens this page top-level (in a popup) to warm up the Nextcloud
+ * SSO session, reaching this script means the SSO chain
+ * (Nextcloud -> Keycloak -> CAS) has completed and the session cookie is set.
+ * We notify the opener, which then closes this window and loads the document
+ * iframe. This avoids the browser's Local Network Access (LNA/PNA) block that
+ * hits the SSO redirect when it is performed from within the iframe.
+ *
+ * @returns {boolean} true if this is a warm-up window (no further refine needed)
+ */
+function handleWarmup() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has(WARMUP_PARAM) && window.self === window.top && window.opener) {
+        const origin = (OC.appConfig.watcha && OC.appConfig.watcha.origin) || "";
+        window.opener.postMessage(WARMUP_MESSAGE, origin);
+        return true;
+    }
+    return false;
 }
 
 function refineWidget() {
@@ -124,5 +150,21 @@ function postUrl(prevUrl) {
     }, 200);
 }
 
-refine();
-postUrl();
+/**
+ * Signal the Watcha parent that the embedded Nextcloud widget has loaded
+ * successfully in the iframe. Watcha uses this to detect when the in-iframe SSO
+ * redirect was NOT blocked (so no top-level warm-up popup is needed).
+ */
+function notifyWidgetReady() {
+    if (window.self !== window.top) {
+        const origin = (OC.appConfig.watcha && OC.appConfig.watcha.origin) || "";
+        window.parent.postMessage(WIDGET_READY_MESSAGE, origin);
+    }
+}
+
+// A warm-up window has no UI purpose: just signal the opener and stop.
+if (!handleWarmup()) {
+    refine();
+    notifyWidgetReady();
+    postUrl();
+}

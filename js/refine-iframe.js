@@ -94,18 +94,34 @@ function refineDocumentSelector() {
         .column-selection,
         .selection,
         .fileactions,
-        .filesize {
+        .filesize,
+        .files-list__column.files-list__row-checkbox,
+        .files-list__row-checkbox {
             display: none !important;
         }
 
         .files-controls {
             padding-left: 0 !important;
         }
-        
+
         #app-content {
             transform: none !important;
         }`;
     insertStyle(style);
+    indentRowNames();
+}
+
+function indentRowNames() {
+    const apply = () => {
+        document.querySelectorAll(".files-list__row-name").forEach((cell) => {
+            cell.style.setProperty("padding-inline-start", "8px", "important");
+        });
+    };
+    apply();
+    new MutationObserver(apply).observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+    });
 }
 
 function hideRootCrumb() {

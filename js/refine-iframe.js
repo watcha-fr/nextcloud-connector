@@ -30,6 +30,7 @@ function refine() {
     if (params.has("watcha_doc-selector")) {
         refineDocumentSelector();
     }
+    hideRootCrumb();
 }
 
 function refineWidget() {
@@ -103,6 +104,14 @@ function refineDocumentSelector() {
         
         #app-content {
             transform: none !important;
+        }`;
+    insertStyle(style);
+}
+
+function hideRootCrumb() {
+    const style = `
+        li[data-crumb-id="nc-vue-5"] {
+            display: none !important;
         }`;
     insertStyle(style);
 }

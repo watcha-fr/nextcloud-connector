@@ -50,6 +50,13 @@ const DISPLAYNAME_KEY = "{DAV:}displayname";
 const OWNER_PRINCIPAL_KEY = "{" . \OCA\DAV\DAV\Sharing\Plugin::NS_OWNCLOUD . "}owner-principal";
 const SUPPORTED_CALENDAR_COMPONENT_SET_KEY = "{" . \OCA\DAV\CalDAV\Plugin::NS_CALDAV . "}supported-calendar-component-set";
 
+// Must stay in sync with NEXTCLOUD_GROUP_ID_PREFIX and NEXTCLOUD_GROUP_ID_LENGHT_LIMIT
+// in synapse/synapse/handlers/watcha_nextcloud.py so that sharing a calendar and sharing
+// a document in the same room reuse the same Nextcloud group instead of creating duplicates.
+const NEXTCLOUD_GROUP_ID_PREFIX = "c4d96a06b7_";
+// Nextcloud does not allow group id longer than 64 characters
+const NEXTCLOUD_GROUP_ID_LENGTH_LIMIT = 64;
+
 class CalendarController extends Controller {
     /** @var string */
     private $userId;
@@ -235,7 +242,7 @@ class CalendarController extends Controller {
      */
     public function createAndShare(string $mxRoomId, string $displayName, array $userIds = []) {
         $userId = $this->userId;
-        $calendarUri = $this->computeIdFromMxRoomId($mxRoomId);
+        $calendarUri = $this->computeCalendarUriFromMxRoomId($mxRoomId);
         $calendarId = $this->create($userId, $calendarUri, $displayName);
         $userIds[] = $this->userId;
         return $this->share($userId, $calendarId, $mxRoomId, $displayName, $userIds);
@@ -264,7 +271,7 @@ class CalendarController extends Controller {
             $this->logger->warning($message);
             return new JSONResponse(["message" => $message], Http::STATUS_FORBIDDEN);
         }
-        $groupId = $this->computeIdFromMxRoomId($mxRoomId);
+        $groupId = $this->computeGroupIdFromMxRoomId($mxRoomId);
         try {
             $this->createGroup($groupId, $displayName);
         } catch (GenericException $e) {
@@ -275,7 +282,7 @@ class CalendarController extends Controller {
         $this->addUsersToGroup($groupId, $userIds, $ownerId);
         $add = [
             array(
-                "href" => "principal:principals/groups/$groupId",
+                "href" => $this->groupPrincipalHref($groupId),
                 "commonName" => null,
                 "summary" => null,
                 "readOnly" => false,
@@ -301,12 +308,12 @@ class CalendarController extends Controller {
      * @return JSONResponse
      */
     public function unShare(array $calendarIds, string $mxRoomId, bool $deleteGroup = False) {
-        $groupId = $this->computeIdFromMxRoomId($mxRoomId);
+        $groupId = $this->computeGroupIdFromMxRoomId($mxRoomId);
         foreach ($calendarIds as $calendarId) {
             if ($this->getUserIdFromCalendarId($calendarId) === $this->userId) {
                 $this->delete($calendarId);
             } else {
-                $remove = ["principal:principals/groups/$groupId"];
+                $remove = [$this->groupPrincipalHref($groupId)];
                 $this->updateShares($calendarId, [], $remove);
             }
         }
@@ -331,7 +338,7 @@ class CalendarController extends Controller {
      * @return JSONResponse
      */
     public function addUser(string $userId, string $mxRoomId, array $calendarIds, string $displayName) {
-        $groupId = $this->computeIdFromMxRoomId($mxRoomId);
+        $groupId = $this->computeGroupIdFromMxRoomId($mxRoomId);
         foreach ($calendarIds as $calendarId) {
             $ownerId = $this->getUserIdFromCalendarId($calendarId);
             $this->addUsersToGroup($groupId, [$userId], $ownerId);
@@ -353,7 +360,7 @@ class CalendarController extends Controller {
      * @return JSONResponse
      */
     public function removeUser(string $userId, string $mxRoomId) {
-        $groupId = $this->computeIdFromMxRoomId($mxRoomId);
+        $groupId = $this->computeGroupIdFromMxRoomId($mxRoomId);
         $this->removeUserFromGroup($groupId, $userId);
         return new JSONResponse((object)[]);
     }
@@ -368,7 +375,7 @@ class CalendarController extends Controller {
      * @return JSONResponse
      */
     public function rename(array $calendarIds, string $mxRoomId, string $displayName) {
-        $groupId = $this->computeIdFromMxRoomId($mxRoomId);
+        $groupId = $this->computeGroupIdFromMxRoomId($mxRoomId);
         $this->renameGroup($groupId, $displayName);
         foreach ($calendarIds as $calendarId) {
             $this->renameForGroupMembers($groupId, $calendarId, $displayName);
@@ -683,10 +690,50 @@ class CalendarController extends Controller {
     }
 
     /**
+     * Build the CalDAV calendar uri from a Matrix room id.
+     *
+     * Kept as a sha256 hash: the uri is part of the CalDAV path (calendars/<user>/<uri>)
+     * so it must stay url-safe. This is independent from the Nextcloud group id.
+     *
      * @param string $mxRoomId
      * @return string
      */
-    private function computeIdFromMxRoomId(string $mxRoomId) {
+    private function computeCalendarUriFromMxRoomId(string $mxRoomId) {
         return hash("sha256", $mxRoomId);
+    }
+
+    /**
+     * Build the Nextcloud group id from a Matrix room id.
+     *
+     * Mirrors synapse's watcha_nextcloud.build_group_id (prefix + room id, truncated to
+     * 64 chars) so that calendar shares reuse the same group as document shares for a
+     * given room, instead of creating a separate sha256-named group.
+     *
+     * @param string $mxRoomId
+     * @return string
+     */
+    private function computeGroupIdFromMxRoomId(string $mxRoomId) {
+        return substr(
+            NEXTCLOUD_GROUP_ID_PREFIX . $mxRoomId,
+            0,
+            NEXTCLOUD_GROUP_ID_LENGTH_LIMIT
+        );
+    }
+
+    /**
+     * Build the CalDAV principal href for a Nextcloud group.
+     *
+     * The group id is url-encoded because Nextcloud's Principal::getGroupMembership
+     * (used to resolve which shared calendars a user sees) builds group principals as
+     * "principals/groups/" . urlencode($gid). The stored share principal must match that
+     * encoded form, otherwise the shared calendar is invisible to group members. With the
+     * former sha256 id this was a no-op (hex is url-safe); the room-id based id contains
+     * "!" and ":" which must be encoded.
+     *
+     * @param string $groupId
+     * @return string
+     */
+    private function groupPrincipalHref(string $groupId) {
+        return "principal:principals/groups/" . urlencode($groupId);
     }
 }

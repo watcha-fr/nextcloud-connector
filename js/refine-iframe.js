@@ -96,7 +96,8 @@ function refineDocumentSelector() {
         .fileactions,
         .filesize,
         .files-list__column.files-list__row-checkbox,
-        .files-list__row-checkbox {
+        .files-list__row-checkbox,
+        .files-list__header-recommendations {
             display: none !important;
         }
 

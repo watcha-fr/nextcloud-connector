@@ -31,6 +31,8 @@ use Psr\Log\LoggerInterface;
 use OCA\DAV\CalDAV\CalDavBackend;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
+use OCP\AppFramework\Http\Attribute\NoAdminRequired;
+use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IConfig;
 use OCP\IDBConnection;
@@ -44,18 +46,12 @@ use Sabre\Uri;
 
 use OCA\Watcha\Dav;
 use OCA\Watcha\Exception\GenericException;
+use OCA\Watcha\RoomGroup;
 
 const CALENDAR_ORDER_KEY = "{http://apple.com/ns/ical/}calendar-order";
 const DISPLAYNAME_KEY = "{DAV:}displayname";
 const OWNER_PRINCIPAL_KEY = "{" . \OCA\DAV\DAV\Sharing\Plugin::NS_OWNCLOUD . "}owner-principal";
 const SUPPORTED_CALENDAR_COMPONENT_SET_KEY = "{" . \OCA\DAV\CalDAV\Plugin::NS_CALDAV . "}supported-calendar-component-set";
-
-// Must stay in sync with NEXTCLOUD_GROUP_ID_PREFIX and NEXTCLOUD_GROUP_ID_LENGHT_LIMIT
-// in synapse/synapse/handlers/watcha_nextcloud.py so that sharing a calendar and sharing
-// a document in the same room reuse the same Nextcloud group instead of creating duplicates.
-const NEXTCLOUD_GROUP_ID_PREFIX = "c4d96a06b7_";
-// Nextcloud does not allow group id longer than 64 characters
-const NEXTCLOUD_GROUP_ID_LENGTH_LIMIT = 64;
 
 class CalendarController extends Controller {
     /** @var string */
@@ -81,7 +77,7 @@ class CalendarController extends Controller {
 
     public function __construct(
         string $AppName,
-        string $UserId,
+        string $userId,
         IRequest $request,
         LoggerInterface $logger,
         CalDavBackend $caldav,
@@ -91,7 +87,7 @@ class CalendarController extends Controller {
         IConfig $config
     ) {
         parent::__construct($AppName, $request);
-        $this->userId = $UserId;
+        $this->userId = $userId;
         $this->logger = $logger;
         $this->caldav = $caldav;
         $this->connection = $connection;
@@ -101,12 +97,11 @@ class CalendarController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
-     * @NoCSRFRequired
-     * 
      * @param string $userId
      * @return JSONResponse
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function list(string $userId) {
         $principalUri = "principals/users/$userId";
         $calendars = $this->caldav->getUsersOwnCalendars($principalUri);
@@ -125,13 +120,12 @@ class CalendarController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
-     * @NoCSRFRequired
-     * 
      * @param string $userId
      * @param int $calendarId
      * @return JSONResponse
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function get(string $userId, int $calendarId) {
         $calendar = $this->getFormatedCalendar($calendarId);
         try {
@@ -144,13 +138,12 @@ class CalendarController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
-     * @NoCSRFRequired
-     * 
      * @param string $userId
      * @param int $calendarId
      * @return JSONResponse
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function reorder(string $userId, int $calendarId) {
         $calendar = $this->caldav->getCalendarById($calendarId);
         if (is_null($calendar)) {
@@ -232,14 +225,13 @@ class CalendarController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
-     * @NoCSRFRequired
-     * 
      * @param string $mxRoomId
      * @param string $displayName
      * @param string[] $userIds (optional)
      * @return JSONResponse
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function createAndShare(string $mxRoomId, string $displayName, array $userIds = []) {
         $userId = $this->userId;
         $calendarUri = $this->computeCalendarUriFromMxRoomId($mxRoomId);
@@ -249,9 +241,6 @@ class CalendarController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
-     * @NoCSRFRequired
-     * 
      * @param string $userId
      * @param int $calendarId
      * @param string $mxRoomId
@@ -259,6 +248,8 @@ class CalendarController extends Controller {
      * @param string[] $userIds (optional)
      * @return JSONResponse
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function share(string $userId, int $calendarId, string $mxRoomId, string $displayName, array $userIds = []) {
         $ownerId = $this->getUserIdFromCalendarId($calendarId);
         if (is_null($ownerId)) {
@@ -299,14 +290,13 @@ class CalendarController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
-     * @NoCSRFRequired
-     * 
      * @param int[] $calendarIds
      * @param string $mxRoomId
      * @param bool $deleteGroup (optional)
      * @return JSONResponse
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function unShare(array $calendarIds, string $mxRoomId, bool $deleteGroup = False) {
         $groupId = $this->computeGroupIdFromMxRoomId($mxRoomId);
         foreach ($calendarIds as $calendarId) {
@@ -328,15 +318,14 @@ class CalendarController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
-     * @NoCSRFRequired
-     * 
      * @param string $userId
      * @param string $mxRoomId
      * @param int[] $calendarIds
      * @param string $displayName
      * @return JSONResponse
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function addUser(string $userId, string $mxRoomId, array $calendarIds, string $displayName) {
         $groupId = $this->computeGroupIdFromMxRoomId($mxRoomId);
         foreach ($calendarIds as $calendarId) {
@@ -352,13 +341,12 @@ class CalendarController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
-     * @NoCSRFRequired
-     * 
      * @param string $userId
      * @param string $mxRoomId
      * @return JSONResponse
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function removeUser(string $userId, string $mxRoomId) {
         $groupId = $this->computeGroupIdFromMxRoomId($mxRoomId);
         $this->removeUserFromGroup($groupId, $userId);
@@ -366,14 +354,13 @@ class CalendarController extends Controller {
     }
 
     /**
-     * @NoAdminRequired
-     * @NoCSRFRequired
-     * 
      * @param int[] $calendarIds
      * @param string $mxRoomId
      * @param string $displayName
      * @return JSONResponse
      */
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
     public function rename(array $calendarIds, string $mxRoomId, string $displayName) {
         $groupId = $this->computeGroupIdFromMxRoomId($mxRoomId);
         $this->renameGroup($groupId, $displayName);
@@ -713,11 +700,7 @@ class CalendarController extends Controller {
      * @return string
      */
     private function computeGroupIdFromMxRoomId(string $mxRoomId) {
-        return substr(
-            NEXTCLOUD_GROUP_ID_PREFIX . $mxRoomId,
-            0,
-            NEXTCLOUD_GROUP_ID_LENGTH_LIMIT
-        );
+        return RoomGroup::buildId($mxRoomId);
     }
 
     /**

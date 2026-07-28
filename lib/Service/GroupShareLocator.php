@@ -24,7 +24,6 @@ declare(strict_types=1);
 
 namespace OCA\Watcha\Service;
 
-use OCA\Watcha\RoomGroup;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 use OCP\Share\IShare;
@@ -32,19 +31,12 @@ use OCP\Share\IShare;
 /**
  * Read-only discovery of the group shares that back room folders.
  *
- * Why SQL rather than `IShareManager::getSharedWith()`
- * ---------------------------------------------------
- * `getSharedWith()` is recipient-centric: it resolves the recipient's group
- * list through a request-scoped cache. Acceptance runs from a `UserAddedEvent`
- * listener, microseconds after the membership row was written, so that cache can
- * still be stale and the freshly joined group would be missing — exactly the
- * case we exist to repair. Reading `oc_share` by group id is cache-immune,
- * indexed, and mirrors the audit query used to size the problem.
+ * Keyed on the group id rather than going through the recipient-centric
+ * `IShareManager::getSharedWith()`, which resolves the caller's group list via a
+ * request-scoped cache. Reading `oc_share` by group id is cache-immune and
+ * indexed.
  *
- * This class only ever reads. Every mutation goes through the public share API
- * in {@see ShareAcceptanceService}: a direct `UPDATE` on `oc_share` would not
- * create the recipient's mount point and would leave them in an inconsistent
- * state.
+ * This class only ever reads.
  */
 class GroupShareLocator {
 
@@ -79,32 +71,5 @@ class GroupShareLocator {
         $result->closeCursor();
 
         return $shareIds;
-    }
-
-    /**
-     * Every room group that currently holds at least one group share.
-     *
-     * @return string[]
-     */
-    public function findRoomGroupsWithShares(): array {
-        $query = $this->connection->getQueryBuilder();
-        $query->selectDistinct("share_with")
-            ->from("share")
-            ->where($query->expr()->eq(
-                "share_type",
-                $query->createNamedParameter(IShare::TYPE_GROUP, IQueryBuilder::PARAM_INT)
-            ));
-
-        $result = $query->executeQuery();
-        $groupIds = [];
-        while ($row = $result->fetch()) {
-            $groupId = (string)$row["share_with"];
-            if (RoomGroup::isRoomGroupId($groupId)) {
-                $groupIds[] = $groupId;
-            }
-        }
-        $result->closeCursor();
-
-        return $groupIds;
     }
 }

@@ -24,18 +24,14 @@ declare(strict_types=1);
 
 namespace OCA\Watcha\Controller;
 
-use OCA\Watcha\RoomGroup;
 use OCA\Watcha\Service\RoomFolderResolver;
-use OCA\Watcha\Service\ShareAcceptanceService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\JSONResponse;
-use OCP\IGroupManager;
 use OCP\IRequest;
 use OCP\IUserManager;
-use Psr\Log\LoggerInterface;
 
 /**
  * Room-scoped operations driven by Synapse.
@@ -50,10 +46,7 @@ class RoomController extends Controller {
         string $AppName,
         IRequest $request,
         private IUserManager $userManager,
-        private IGroupManager $groupManager,
-        private ShareAcceptanceService $shareAcceptanceService,
         private RoomFolderResolver $roomFolderResolver,
-        private LoggerInterface $logger,
     ) {
         parent::__construct($AppName, $request);
     }
@@ -71,7 +64,7 @@ class RoomController extends Controller {
      *       "roomId": "!abc:example.org",
      *       "userId": "1b4ea9d9-...",
      *       "groupId": "c4d96a06b7_!abc:example.org",
-     *       "status": "ok" | "pending" | "not-member" | "deleted" | "no-share",
+     *       "status": "ok" | "rejected" | "not-member" | "deleted" | "no-share",
      *       "fileId": 12345,
      *       "path": "/FACILITATEURS",
      *       "shareId": "59"
@@ -90,7 +83,7 @@ class RoomController extends Controller {
             );
         }
 
-        $groupId = $this->shareAcceptanceService->findRoomGroupId($roomId);
+        $groupId = $this->roomFolderResolver->findRoomGroupId($roomId);
         if ($groupId === null) {
             return new JSONResponse([
                 "roomId" => $roomId,
@@ -108,94 +101,6 @@ class RoomController extends Controller {
             "userId" => $requester,
             "groupId" => $groupId,
             ...$this->roomFolderResolver->resolveForUser($groupId, $requester),
-        ]);
-    }
-
-    /**
-     * Guarantee, in one idempotent operation, that a room member can reach the
-     * room's document space: membership of the room group *and* acceptance of
-     * the folder shares granted through it.
-     *
-     * Synapse calls this after adding a member to the group, instead of relying
-     * on a side effect of share creation (which only ever covered the members
-     * present when the share was created).
-     *
-     * The response reports what was changed and what was already in place, so
-     * the caller can log a meaningful outcome and a human can verify it:
-     *
-     *     {
-     *       "roomId": "!abc:example.org",
-     *       "userId": "1b4ea9d9-...",
-     *       "groupId": "c4d96a06b7_!abc:example.org",
-     *       "groupMembership": "added" | "already-member",
-     *       "sharesAccepted": 1,
-     *       "shares": [ { "shareId": "227", "status": "accepted", "target": "/Nouveau dossier" } ]
-     *     }
-     *
-     * @param string $roomId the Matrix room id
-     * @param string $userId the *Nextcloud* username of the member
-     */
-    #[NoAdminRequired]
-    #[NoCSRFRequired]
-    public function syncMember(string $roomId, string $userId): JSONResponse {
-        $user = $this->userManager->get($userId);
-        if ($user === null) {
-            $this->logger->warning(
-                "Cannot sync room member: Nextcloud user $userId does not exist",
-                ["app" => "watcha"]
-            );
-            return new JSONResponse(
-                ["message" => "Unknown Nextcloud user $userId"],
-                Http::STATUS_NOT_FOUND
-            );
-        }
-
-        // The group may not exist yet: a room only gets one once a resource has
-        // been shared with it. That is not an error, it just means there is
-        // nothing to synchronise.
-        $groupId = $this->shareAcceptanceService->findRoomGroupId($roomId);
-        if ($groupId === null) {
-            return new JSONResponse([
-                "roomId" => $roomId,
-                "userId" => $userId,
-                "groupId" => null,
-                "groupMembership" => "no-group",
-                "sharesAccepted" => 0,
-                "shares" => [],
-            ]);
-        }
-
-        $group = $this->groupManager->get($groupId);
-        if ($group === null) {
-            return new JSONResponse(
-                ["message" => "Nextcloud group $groupId does not exist"],
-                Http::STATUS_NOT_FOUND
-            );
-        }
-
-        $membership = "already-member";
-        if (!$group->inGroup($user)) {
-            $group->addUser($user);
-            $membership = "added";
-            $this->logger->info(
-                "Added user $userId to room group $groupId",
-                ["app" => "watcha"]
-            );
-        }
-
-        // Adding the user to the group already triggers our own
-        // UserAddedEvent listener, but we must not depend on that: the call
-        // above is a no-op when the user is already a member, which is exactly
-        // the case this endpoint exists to repair.
-        $accepted = $this->shareAcceptanceService->acceptPendingSharesForUser($userId, $groupId);
-
-        return new JSONResponse([
-            "roomId" => $roomId,
-            "userId" => $userId,
-            "groupId" => $groupId,
-            "groupMembership" => $membership,
-            "sharesAccepted" => $accepted,
-            "shares" => $this->shareAcceptanceService->inspectSharesForUser($userId, $groupId),
         ]);
     }
 }

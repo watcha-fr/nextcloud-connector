@@ -30,12 +30,10 @@ use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
-use OCP\Group\Events\UserAddedEvent;
 use OCP\Security\CSP\AddContentSecurityPolicyEvent;
 use OCP\Util;
 
 use OCA\Watcha\Listener\AddContentSecurityPolicyListener;
-use OCA\Watcha\Listener\RoomGroupMembershipListener;
 use OCA\Watcha\Middleware\SecurityMiddleware;
 
 /**
@@ -63,19 +61,6 @@ class Application extends App implements IBootstrap {
     public function register(IRegistrationContext $context): void {
         $context->registerMiddleware(SecurityMiddleware::class);
 		$context->registerEventListener(AddContentSecurityPolicyEvent::class, AddContentSecurityPolicyListener::class);
-
-        // A member who joins a room group after its folder was shared gets no
-        // accepted sub-share, so the document space is unreachable until the
-        // share is accepted for them. See RoomGroupMembershipListener for why
-        // Nextcloud's own UserAddedToGroupListener does not cover this.
-        //
-        // No symmetric UserRemovedEvent listener is registered on purpose:
-        // losing group membership already revokes access (getSharedWith()
-        // restricts group shares to the recipient's *current* groups), so a
-        // lingering sub-share row grants nothing. Keeping it is in fact
-        // desirable — a member who is removed and re-added recovers their
-        // folder, and their own mount name, immediately.
-        $context->registerEventListener(UserAddedEvent::class, RoomGroupMembershipListener::class);
     }
 
     /**

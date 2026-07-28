@@ -7,7 +7,6 @@ namespace OCA\Watcha\Controller;
 use Psr\Log\LoggerInterface;
 
 use OCA\Files_Sharing\Controller\ShareAPIController;
-use OCA\Watcha\Service\ShareAcceptanceService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
@@ -36,6 +35,9 @@ use OCA\Federation\TrustedServers;
 class DocumentController extends ShareAPIController {
 
     private LoggerInterface $logger;
+    private IManager $shareManager;
+    private IGroupManager $groupManager;
+    private IRootFolder $rootFolder;
 
     public function __construct(
         string $appName,
@@ -59,7 +61,6 @@ class DocumentController extends ShareAPIController {
         ITagManager $tagManager,
         IEmailValidator $emailValidator,
         ?TrustedServers $trustedServers,
-        private ShareAcceptanceService $shareAcceptanceService,
         ?string $userId = null,
     ) {
         $requester = $request->getParam("requester");
@@ -88,6 +89,9 @@ class DocumentController extends ShareAPIController {
             $requester,
         );
         $this->logger = $logger;
+        $this->shareManager = $shareManager;
+        $this->groupManager = $groupManager;
+        $this->rootFolder = $rootFolder;
     }
 
     #[NoAdminRequired]
@@ -125,14 +129,28 @@ class DocumentController extends ShareAPIController {
             $sendMail
         );
 
-        // Accept the freshly created share for the members present right now.
-        // Members who join later are covered by RoomGroupMembershipListener and
-        // by the room member sync endpoint — this call is *not* the mechanism
-        // that keeps the estate consistent, only a fast path for the common
-        // case where the folder is shared with an already-populated room.
         $responseData = $response->getData();
-        if (isset($responseData['id']) && $shareWith !== null && $shareType === IShare::TYPE_GROUP) {
-            $this->shareAcceptanceService->acceptPendingSharesForGroup($shareWith);
+        if (isset($responseData['id']) && $shareWith !== null) {
+            $shareId = $responseData['id'];
+            $group = $this->groupManager->get($shareWith);
+            if ($group !== null) {
+                foreach ($group->getUsers() as $user) {
+                    $uid = $user->getUID();
+                    try {
+                        $userShare = $this->shareManager->getShareById(
+                            'ocinternal:' . $shareId,
+                            $uid
+                        );
+                        if ($userShare->getStatus() === IShare::STATUS_PENDING) {
+                            $this->shareManager->acceptShare($userShare, $uid);
+                            $this->rootFolder->getUserFolder($uid)->getDirectoryListing();
+                            $this->logger->info("Auto-accepted share $shareId for user $uid");
+                        }
+                    } catch (\Exception $e) {
+                        $this->logger->warning("Failed to auto-accept share $shareId for user $uid: " . $e->getMessage());
+                    }
+                }
+            }
         }
 
         return $response;

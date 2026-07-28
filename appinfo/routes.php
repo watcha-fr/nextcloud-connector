@@ -93,15 +93,6 @@ return [
 			'verb' => 'DELETE',
 		],
         // Rooms
-        // Idempotently guarantees that a room member holds group membership and
-        // has accepted the room folder's shares. {userId} is the *Nextcloud*
-        // username, consistently with the other routes of this app.
-        [
-            'name' => 'room#syncMember',
-            'url'  => '/rooms/{roomId}/members/{userId}/sync',
-            'verb' => 'POST',
-            'requirements' => ['roomId' => '[^/]+'],
-        ],
         // Resolves the room folder by stable identifier (file id) rather than by
         // name, which is not stable across recipients.
         [

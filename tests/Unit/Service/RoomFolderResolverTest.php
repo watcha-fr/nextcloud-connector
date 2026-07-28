@@ -32,6 +32,7 @@ class RoomFolderResolverTest extends TestCase {
     private IGroupManager&MockObject $groupManager;
     private IUserManager&MockObject $userManager;
     private GroupShareLocator&MockObject $locator;
+    private IAppConfig&MockObject $appConfig;
     private RoomFolderResolver $resolver;
 
     protected function setUp(): void {
@@ -41,6 +42,7 @@ class RoomFolderResolverTest extends TestCase {
         $this->groupManager = $this->createMock(IGroupManager::class);
         $this->userManager = $this->createMock(IUserManager::class);
         $this->locator = $this->createMock(GroupShareLocator::class);
+        $this->appConfig = $this->createMock(IAppConfig::class);
 
         $this->userManager->method("get")->willReturn($this->createMock(IUser::class));
         $this->groupManager->method("get")->willReturn($this->groupContaining(true));
@@ -50,6 +52,7 @@ class RoomFolderResolverTest extends TestCase {
             $this->groupManager,
             $this->userManager,
             $this->locator,
+            $this->appConfig,
             $this->createMock(LoggerInterface::class),
         );
     }
@@ -106,20 +109,41 @@ class RoomFolderResolverTest extends TestCase {
     }
 
     /**
-     * The case behind the whole fix: a member who joined after the folder was
-     * shared. Reported as recoverable, and the file id is returned even though
-     * nothing is mounted yet.
+     * Access is carried by the parent group share. Nextcloud only materialises a
+     * per-recipient child row lazily — when the recipient renames, moves or
+     * rejects their mount — so STATUS_PENDING is the normal state of a perfectly
+     * reachable folder and must NOT be reported as a problem.
+     *
+     * Reading it as a defect is what produced a wrong diagnosis once already: the
+     * ratio of "unaccepted pairs" per share is essentially identical on a healthy
+     * deployment (0.50) and on the one reported as broken (0.55).
      */
-    public function testReportsAPendingShareAsRecoverable(): void {
+    public function testTreatsAPendingShareAsReachable(): void {
         $this->locator->method("findGroupShareIds")->willReturn(["59"]);
         $this->shareManager->method("getShareById")
             ->willReturn($this->share(IShare::STATUS_PENDING, "/Nouveau dossier"));
 
         $result = $this->resolver->resolveForUser(self::GROUP_ID, "alice");
 
-        $this->assertSame("pending", $result["status"]);
+        $this->assertSame("ok", $result["status"]);
         $this->assertSame(59, $result["fileId"]);
-        $this->assertNull($result["path"], "nothing is mounted yet, so there is no path to report");
+        $this->assertSame("/Nouveau dossier", $result["path"]);
+    }
+
+    /**
+     * The one status that really denies access: the recipient dismissed the
+     * share, so Nextcloud removed their mount.
+     */
+    public function testReportsAnExplicitlyRejectedShare(): void {
+        $this->locator->method("findGroupShareIds")->willReturn(["59"]);
+        $this->shareManager->method("getShareById")
+            ->willReturn($this->share(IShare::STATUS_REJECTED, "/Nouveau dossier"));
+
+        $result = $this->resolver->resolveForUser(self::GROUP_ID, "alice");
+
+        $this->assertSame("rejected", $result["status"]);
+        $this->assertSame(59, $result["fileId"]);
+        $this->assertNull($result["path"], "the mount was removed, so there is no path to report");
     }
 
     public function testReportsANonMemberBeforeLookingAtShares(): void {
@@ -132,6 +156,7 @@ class RoomFolderResolverTest extends TestCase {
             $groupManager,
             $this->userManager,
             $this->locator,
+            $this->appConfig,
             $this->createMock(LoggerInterface::class),
         );
 
@@ -172,6 +197,7 @@ class RoomFolderResolverTest extends TestCase {
             $groupManager,
             $this->userManager,
             $this->locator,
+            $this->appConfig,
             $this->createMock(LoggerInterface::class),
         );
 

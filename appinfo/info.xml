@@ -22,8 +22,4 @@
     <dependencies>
         <nextcloud min-version="33.0.0" max-version="33.0.5"/>
     </dependencies>
-
-    <commands>
-        <command>OCA\Watcha\Command\AcceptPendingShares</command>
-    </commands>
 </info>

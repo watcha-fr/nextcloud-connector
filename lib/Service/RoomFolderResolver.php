@@ -24,7 +24,9 @@ declare(strict_types=1);
 
 namespace OCA\Watcha\Service;
 
+use OCA\Watcha\RoomGroup;
 use OCP\Files\NotFoundException;
+use OCP\IAppConfig;
 use OCP\IGroupManager;
 use OCP\IUserManager;
 use OCP\Share\Exceptions\ShareNotFound;
@@ -35,28 +37,35 @@ use Psr\Log\LoggerInterface;
 /**
  * Resolves a room's document folder as it exists *for one specific user*.
  *
- * Why this endpoint exists
- * -----------------------
+ * Why this exists
+ * ---------------
  * The client used to locate the folder by name, building a URL from the folder
  * label. A mount name is not stable: every recipient of a Nextcloud share may
  * rename their own mount (`oc_share.file_target` on the child share), and
  * Nextcloud appends a suffix on collision. The same folder can therefore be
- * `/Nouveau dossier` for its owner, `/Facilitateurs` for one member and
- * `/FACILITATEURS` for another — so a name resolved for one person 404s for
- * the next.
+ * `/Nouveau dossier` for 24 members, `/Facilitateurs` for one and
+ * `/FACILITATEURS` for another — so a name resolved for one person 404s for the
+ * next. The file id *is* stable; this returns it, together with the path as
+ * currently mounted for the caller.
  *
- * The file id *is* stable. This resolver returns it, together with the path as
- * currently mounted for the caller, so the client never has to guess.
+ * What a missing child share does NOT mean
+ * ----------------------------------------
+ * Access is carried by the **parent group share**. Nextcloud only materialises a
+ * per-recipient child row (`share_type = 2`) *lazily* — when the recipient
+ * renames, moves or rejects their mount. Its absence is the normal state and
+ * says nothing about access, so `IShare::STATUS_PENDING` is deliberately treated
+ * as reachable here. Reading it as a defect is what led to a wrong diagnosis
+ * once already: the ratio of "unaccepted pairs" per share is essentially the
+ * same on a healthy deployment as on a broken one.
  *
- * It also distinguishes the reasons the folder may be unreachable, so the client
- * can act on them instead of showing one dead end with a "retry" button that
- * cannot change anything:
+ * Only an explicit `STATUS_REJECTED` is a real denial: the recipient dismissed
+ * the share, and Nextcloud removed their mount.
  *
- * - `ok`          the folder is reachable; `fileId` and `path` are usable
- * - `pending`     the share exists but has not been accepted for this user —
- *                 the caller should request a member sync and retry
+ * Statuses returned:
+ * - `ok`          reachable; `fileId` and `path` are usable
+ * - `rejected`    the recipient explicitly dismissed this share
  * - `not-member`  the user does not belong to the room group
- * - `deleted`     the share exists and is accepted, but the folder is gone
+ * - `deleted`     the folder itself is gone
  * - `no-share`    no folder is bound to this room
  */
 class RoomFolderResolver {
@@ -66,8 +75,39 @@ class RoomFolderResolver {
         private IGroupManager $groupManager,
         private IUserManager $userManager,
         private GroupShareLocator $groupShareLocator,
+        private IAppConfig $appConfig,
         private LoggerInterface $logger,
     ) {
+    }
+
+    /**
+     * The Nextcloud group backing a room, or null when the room has none.
+     *
+     * The hash prefix cannot be derived from the room id, so an existing group is
+     * looked up when the conventional prefix does not match.
+     */
+    public function findRoomGroupId(string $roomId): ?string {
+        $prefix = $this->appConfig->getValueString(
+            "watcha",
+            "room_group_prefix",
+            RoomGroup::ID_PREFIX
+        );
+        $candidate = RoomGroup::buildId($roomId, $prefix);
+        if ($this->groupManager->groupExists($candidate)) {
+            return $candidate;
+        }
+
+        // Fall back to a search on the room's localpart, which survives the
+        // 64-character truncation, in case the deployment uses another prefix.
+        $localpart = explode(":", $roomId)[0];
+        foreach ($this->groupManager->search($localpart) as $group) {
+            $groupId = $group->getGID();
+            if (RoomGroup::isRoomGroupId($groupId) && str_contains($groupId, $localpart)) {
+                return $groupId;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -123,16 +163,14 @@ class RoomFolderResolver {
             return $this->result("no-share");
         }
 
-        if ($share->getStatus() !== IShare::STATUS_ACCEPTED) {
-            // Deliberately still reports the file id: it is stable and valid, it
-            // is only the mount that is missing. The client can show the folder
-            // as soon as a member sync accepts the share.
-            return $this->result("pending", $share->getNodeId(), null, $shareId);
+        if ($share->getStatus() === IShare::STATUS_REJECTED) {
+            // The one status that really denies access. PENDING does not: see the
+            // class docblock on lazy child shares.
+            return $this->result("rejected", $share->getNodeId(), null, $shareId);
         }
 
         try {
-            // Only way to tell an accepted share of a deleted folder from a
-            // working one.
+            // Only way to tell a share of a deleted folder from a working one.
             $share->getNode();
         } catch (NotFoundException $e) {
             return $this->result("deleted", null, null, $shareId);

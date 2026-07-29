@@ -8,6 +8,7 @@ use OCA\Watcha\Service\GroupShareLocator;
 use OCA\Watcha\Service\RoomFolderResolver;
 use OCP\Files\Node;
 use OCP\Files\NotFoundException;
+use OCP\IAppConfig;
 use OCP\IGroup;
 use OCP\IGroupManager;
 use OCP\IUser;

@@ -7,13 +7,14 @@ if (!defined('PHPUNIT_RUN')) {
 require_once __DIR__.'/../../../lib/base.php';
 
 // Fix for "Autoload path not allowed: .../tests/lib/testcase.php"
-\OC::$loader->addValidRoot(OC::$SERVERROOT . '/tests');
+// Only present in a source checkout of the server. A production image ships no
+// tests/ directory, and requiring it unconditionally made the whole suite
+// unrunnable there — which is where these tests actually need to run.
+if (is_dir(OC::$SERVERROOT . '/tests')) {
+    \OC::$loader->addValidRoot(OC::$SERVERROOT . '/tests');
+}
 
 // Fix for "Autoload path not allowed: .../watcha/tests/testcase.php"
 \OC_App::loadApp('watcha');
-
-if(!class_exists('PHPUnit_Framework_TestCase')) {
-    require_once('PHPUnit/Autoload.php');
-}
 
 OC_Hook::clear();

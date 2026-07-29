@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OCA\Watcha\Tests\Unit;
 
 use OCA\Watcha\RoomGroup;
-use Test\TestCase;
+use PHPUnit\Framework\TestCase;
 
 class RoomGroupTest extends TestCase {
 

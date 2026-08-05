@@ -126,11 +126,30 @@ function indentRowNames() {
 }
 
 function hideRootCrumb() {
-    const style = `
-        li[data-crumb-id="nc-vue-5"] {
-            display: none !important;
-        }`;
-    insertStyle(style);
+    // The root breadcrumb navigates out of the shared folder to the user's own
+    // Files root, exposing their whole personal tree. Nextcloud gives it no
+    // stable marker of its own: every crumb carries the class `vue-crumb` and a
+    // `data-crumb-id` whose value is a Vue instance id (`nc-vue-N`), assigned
+    // incrementally at runtime. That id shifts as soon as extra components are
+    // instantiated — e.g. when a folder is renamed — which is why the former
+    // hard-coded `data-crumb-id="nc-vue-5"` selector silently stopped matching
+    // and the root crumb reappeared, differently per instance.
+    //
+    // The root is simply the FIRST crumb, so select it positionally (document
+    // order) and keep it hidden across the re-renders that a rename triggers.
+    // Only the first crumb is hidden: any deeper crumb belongs to the shared
+    // folder itself and must stay, so navigating back up *within* the share works.
+    const hideFirstCrumb = () => {
+        const rootCrumb = document.querySelector(".vue-crumb");
+        if (rootCrumb) {
+            rootCrumb.style.setProperty("display", "none", "important");
+        }
+    };
+    hideFirstCrumb();
+    new MutationObserver(hideFirstCrumb).observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+    });
 }
 
 function insertStyle(style) {

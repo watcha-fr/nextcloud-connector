@@ -330,6 +330,13 @@ class CalendarController extends Controller {
         $groupId = $this->computeGroupIdFromMxRoomId($mxRoomId);
         foreach ($calendarIds as $calendarId) {
             $ownerId = $this->getUserIdFromCalendarId($calendarId);
+            // watcha+
+            // Runs on every join. If the calendar predates the calendar/document
+            // group unification and is still shared with a legacy sha256 group,
+            // migrate it onto the room group here — otherwise adding the joining
+            // user to the room group would not make the calendar visible to them.
+            $this->healRoomCalendarGroup((int)$calendarId, $groupId, $displayName, $ownerId);
+            // +watcha
             $this->addUsersToGroup($groupId, [$userId], $ownerId);
             try {
                 $this->renameForUser($userId, $calendarId, $displayName);
@@ -338,6 +345,123 @@ class CalendarController extends Controller {
             }
         }
         return new JSONResponse((object)[]);
+    }
+
+    /**
+     * Migrate a calendar still shared with a legacy sha256 group onto the room
+     * group, and remove the now-redundant legacy group.
+     *
+     * The room group `<hash>_<room id>` is the single group Synapse keeps in sync
+     * with room membership, and documents already share with it. A legacy
+     * per-calendar sha256 group has a frozen membership, so the calendar is
+     * invisible to anyone who joined after it was shared, and the room ends up
+     * with two Nextcloud groups. This heals both, idempotently, on the join that
+     * triggered it — a healthy calendar (already on the room group, no legacy
+     * share) is left untouched after a single read.
+     *
+     * @param string $ownerId the calendar owner, forwarded to the group-add guard
+     */
+    private function healRoomCalendarGroup(int $calendarId, string $roomGroupId, string $displayName, string $ownerId) {
+        $node = $this->getCalendarNode($calendarId);
+        if (is_null($node)) {
+            return;
+        }
+
+        $roomGroupHref = $this->groupPrincipalHref($roomGroupId);
+        $roomGroupShared = false;
+        $legacyShares = []; // groupId => href, as returned by getShares (used verbatim to unshare)
+
+        foreach ($node->getShares() as $share) {
+            $href = is_array($share) ? ($share["href"] ?? "") : ($share->href ?? "");
+            $isGroupShare = is_array($share)
+                ? !empty($share["{http://owncloud.org/ns}group-share"])
+                : (strpos((string)$href, "principals/groups/") !== false);
+            if (!$isGroupShare || $href === "") {
+                continue;
+            }
+            if ($href === $roomGroupHref) {
+                $roomGroupShared = true;
+                continue;
+            }
+            $groupId = urldecode(substr($href, strrpos($href, "/") + 1));
+            if (RoomGroup::isLegacyCalendarGroupId($groupId)) {
+                $legacyShares[$groupId] = $href;
+            }
+        }
+
+        // Already on the room group and nothing legacy: healthy, nothing to do.
+        if (empty($legacyShares) && $roomGroupShared) {
+            return;
+        }
+
+        // 1. the room group must exist and back the calendar
+        try {
+            $this->createGroup($roomGroupId, $displayName); // idempotent
+            if (!$roomGroupShared) {
+                $this->updateShares($calendarId, [[
+                    "href" => $roomGroupHref,
+                    "commonName" => null,
+                    "summary" => null,
+                    "readOnly" => false,
+                ]], []);
+                $this->logger->info("calendar $calendarId re-shared with room group $roomGroupId");
+            }
+        } catch (GenericException | NotFound $e) {
+            $this->logger->error("could not re-share calendar $calendarId with room group $roomGroupId: " . $e->getMessage());
+            return; // never remove a legacy share we could not replace
+        }
+
+        // 2. migrate each legacy group's members onto the room group, drop its
+        //    share, and delete it once it no longer backs any calendar.
+        foreach ($legacyShares as $legacyGroupId => $href) {
+            $legacyGroup = $this->groupManager->get($legacyGroupId);
+            if (!is_null($legacyGroup)) {
+                $memberIds = array_map(fn ($user) => $user->getUID(), $legacyGroup->getUsers());
+                $this->addUsersToGroup($roomGroupId, $memberIds, $ownerId);
+            }
+            try {
+                $this->updateShares($calendarId, [], [$href]);
+            } catch (GenericException | NotFound $e) {
+                $this->logger->warning("could not remove legacy share $href from calendar $calendarId: " . $e->getMessage());
+                continue;
+            }
+            if (!$this->groupStillSharesCalendars($legacyGroupId)) {
+                $this->deleteGroup($legacyGroupId);
+                $this->logger->info("legacy calendar group $legacyGroupId removed after migration to $roomGroupId");
+            }
+        }
+    }
+
+    /**
+     * The Sabre calendar node, or null when the calendar does not exist.
+     */
+    private function getCalendarNode(int $calendarId) {
+        $userId = $this->getUserIdFromCalendarId($calendarId);
+        if (is_null($userId)) {
+            return null;
+        }
+        $calendar = $this->caldav->getCalendarById($calendarId);
+        if (is_null($calendar)) {
+            return null;
+        }
+        return Dav::getServerInstance()->tree->getNodeForPath("calendars/$userId/" . $calendar["uri"]);
+    }
+
+    /**
+     * Whether a group still backs at least one calendar share. Guards the
+     * deletion of a legacy group that might, exceptionally, serve several.
+     */
+    private function groupStillSharesCalendars(string $groupId): bool {
+        $principalUri = "principals/groups/" . urlencode($groupId);
+        $query = $this->connection->getQueryBuilder();
+        $query->select($query->func()->count("*", "nb"))
+            ->from("dav_shares")
+            ->where($query->expr()->eq("type", $query->createNamedParameter("calendar")))
+            ->andWhere($query->expr()->eq("principaluri", $query->createNamedParameter($principalUri)));
+        $result = $query->executeQuery();
+        $count = (int)$result->fetchOne();
+        $result->closeCursor();
+        return $count > 0;
     }
 
     /**

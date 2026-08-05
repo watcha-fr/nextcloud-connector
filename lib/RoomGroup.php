@@ -52,6 +52,18 @@ final class RoomGroup {
     private const ID_PATTERN = '/^[0-9a-f]{10}_!/';
 
     /**
+     * Before calendar and document sharing were unified onto the room group,
+     * calendars were shared with a per-calendar group named after a raw sha256
+     * hex digest. Those legacy groups have a frozen membership, disconnected from
+     * room membership sync, which makes the calendar invisible to anyone who
+     * joined the room after it was shared. They are migrated onto the room group
+     * on the fly. The 64-hex shape is distinctive: a room group (`<prefix>_!…`)
+     * never matches it, and neither does an ordinary Nextcloud group — which
+     * keeps the destructive cleanup strictly to Watcha's own legacy groups.
+     */
+    private const LEGACY_CALENDAR_ID_PATTERN = '/^[0-9a-f]{64}$/';
+
+    /**
      * Build the group id of a room, applying Synapse's truncation.
      */
     public static function buildId(string $roomId, string $prefix = self::ID_PREFIX): string {
@@ -64,5 +76,13 @@ final class RoomGroup {
      */
     public static function isRoomGroupId(string $groupId): bool {
         return preg_match(self::ID_PATTERN, $groupId) === 1;
+    }
+
+    /**
+     * Whether a group id is a legacy per-calendar sha256 group that should be
+     * migrated onto the room group and then removed.
+     */
+    public static function isLegacyCalendarGroupId(string $groupId): bool {
+        return preg_match(self::LEGACY_CALENDAR_ID_PATTERN, $groupId) === 1;
     }
 }

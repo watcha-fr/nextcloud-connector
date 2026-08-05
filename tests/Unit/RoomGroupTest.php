@@ -42,6 +42,25 @@ class RoomGroupTest extends TestCase {
         $this->assertTrue(RoomGroup::isRoomGroupId("0123456789_!abc:example.org"));
     }
 
+    public function testIsLegacyCalendarGroupIdAcceptsASha256Digest(): void {
+        // 64 lowercase hex chars, e.g. e16abc8226ac...  measured on the estate.
+        $this->assertTrue(RoomGroup::isLegacyCalendarGroupId(str_repeat("a", 64)));
+        $this->assertTrue(RoomGroup::isLegacyCalendarGroupId(
+            "e16abc8226ac8ee3657785be6a8d524e392c567687a17699f39620779fd56430"
+        ));
+    }
+
+    public function testIsLegacyCalendarGroupIdRejectsEverythingElse(): void {
+        // A room group is never mistaken for a legacy calendar group: the
+        // migration cleanup deletes groups, so this boundary must be exact.
+        $this->assertFalse(RoomGroup::isLegacyCalendarGroupId("c4d96a06b7_!room:example.org"));
+        $this->assertFalse(RoomGroup::isLegacyCalendarGroupId("admin"));
+        $this->assertFalse(RoomGroup::isLegacyCalendarGroupId(str_repeat("a", 63))); // too short
+        $this->assertFalse(RoomGroup::isLegacyCalendarGroupId(str_repeat("a", 65))); // too long
+        $this->assertFalse(RoomGroup::isLegacyCalendarGroupId(str_repeat("A", 64))); // uppercase
+        $this->assertFalse(RoomGroup::isLegacyCalendarGroupId("g" . str_repeat("a", 63))); // non-hex
+    }
+
     public function testIsRoomGroupIdRejectsOrdinaryGroups(): void {
         // Ordinary Nextcloud groups must keep their standard, user-controlled
         // sharing behaviour: the listener relies on this to stay out of the way.

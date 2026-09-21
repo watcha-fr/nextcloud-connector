@@ -31,9 +31,11 @@ use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\Security\CSP\AddContentSecurityPolicyEvent;
+use OCP\User\Events\UserCreatedEvent;
 use OCP\Util;
 
 use OCA\Watcha\Listener\AddContentSecurityPolicyListener;
+use OCA\Watcha\Listener\UserCreatedListener;
 use OCA\Watcha\Middleware\SecurityMiddleware;
 
 /**
@@ -61,6 +63,10 @@ class Application extends App implements IBootstrap {
     public function register(IRegistrationContext $context): void {
         $context->registerMiddleware(SecurityMiddleware::class);
 		$context->registerEventListener(AddContentSecurityPolicyEvent::class, AddContentSecurityPolicyListener::class);
+		// Le connecteur sert aussi des instances sans Synapse pour maître
+		// d'identité : le listener s'enregistre toujours, mais ne fait rien
+		// tant que `watcha_registration_token` n'est pas configuré.
+		$context->registerEventListener(UserCreatedEvent::class, UserCreatedListener::class);
     }
 
     /**

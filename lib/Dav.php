@@ -54,6 +54,24 @@ use OCA\DAV\CalDAV\Sharing\Backend as CalendarSharingBackend;
 use OCP\L10N\IFactory as IL10NFactory;
 use OCA\DAV\CalDAV\DefaultCalendarValidator;
 use OCA\DAV\Db\PropertyMapper;
+use OCA\DAV\CalDAV\Federation\FederatedCalendarFactory;
+use OCA\DAV\CalDAV\Federation\FederatedCalendarMapper;
+use OCA\DAV\CalDAV\Proxy\ProxyMapper;
+use OCA\DAV\CalDAV\Schedule\IMipPlugin;
+use OCP\App\IAppManager;
+use OCP\EventDispatcher\IEventDispatcher;
+use OCP\IAppConfig;
+use OCP\ICacheFactory;
+use OCP\IConfig;
+use OCP\IGroupManager;
+use OCP\IRequest;
+use OCP\ISession;
+use OCP\IUserManager;
+use OCP\IUserSession;
+use OCP\Security\Bruteforce\IThrottler;
+use OCP\Security\ISecureRandom;
+use OCP\Server;
+use OCP\Share\IManager as IShareManager;
 // </apps/dav/appinfo/v1/caldav.php>
 
 /**
@@ -66,41 +84,48 @@ class Dav {
     /**
      * @return \Sabre\DAV\Server
      */
-    public static function getServerInstance(IDBConnection $connection = null, IUser $user = null) {
+    public static function getServerInstance(?IDBConnection $connection = null, ?IUser $user = null) {
         $baseuri = \OC::$WEBROOT . '/remote.php/dav/';
 
         // <apps/dav/appinfo/v1/caldav.php>
+        // watcha+
+        // Nextcloud 34 removed every `\OC::$server->getXxx()` getter but `getL10N()`,
+        // `getUserFolder()` and `getWebRoot()`. Upstream's own `caldav.php` — the file
+        // this block mirrors — moved to `OCP\Server::get()`, so this mirrors it too;
+        // keeping the copy literally aligned with upstream is what makes the next
+        // server upgrade a diff rather than an investigation.
+        // +watcha
         $authBackend = new Auth(
-            \OC::$server->getSession(),
-            \OC::$server->getUserSession(),
-            \OC::$server->getRequest(),
-            \OC::$server->get(\OC\Authentication\TwoFactorAuth\Manager::class),
-            \OC::$server->query(\OCP\Security\Bruteforce\IThrottler::class),
+            Server::get(ISession::class),
+            Server::get(IUserSession::class),
+            Server::get(IRequest::class),
+            Server::get(\OC\Authentication\TwoFactorAuth\Manager::class),
+            Server::get(IThrottler::class),
             'principals/'
         );
         $principalBackend = new Principal(
-            \OC::$server->getUserManager(),
-            \OC::$server->getGroupManager(),
-            \OC::$server->get(IAccountManager::class),
-            \OC::$server->query(\OCP\Share\IManager::class),
-            \OC::$server->getUserSession(),
-            \OC::$server->getAppManager(),
-            \OC::$server->query(\OCA\DAV\CalDAV\Proxy\ProxyMapper::class),
-            \OC::$server->get(KnownUserService::class),
-            \OC::$server->getConfig(),
-            \OC::$server->getL10NFactory(),
+            Server::get(IUserManager::class),
+            Server::get(IGroupManager::class),
+            Server::get(IAccountManager::class),
+            Server::get(IShareManager::class),
+            Server::get(IUserSession::class),
+            Server::get(IAppManager::class),
+            Server::get(ProxyMapper::class),
+            Server::get(KnownUserService::class),
+            Server::get(IConfig::class),
+            Server::get(IL10NFactory::class),
             'principals/'
         );
-        $db = \OC::$server->getDatabaseConnection();
-        $userManager = \OC::$server->getUserManager();
-        $random = \OC::$server->getSecureRandom();
-        $logger = \OC::$server->get(LoggerInterface::class);
-        $dispatcher = \OC::$server->get(\OCP\EventDispatcher\IEventDispatcher::class);
-        $config = \OC::$server->get(\OCP\IConfig::class);
-        $calendarSharingBackend = \OC::$server->get(CalendarSharingBackend::class); //dla+
-        $l10nFactory = \OC::$server->get(IL10NFactory::class);
+        $db = Server::get(IDBConnection::class);
+        $userManager = Server::get(IUserManager::class);
+        $random = Server::get(ISecureRandom::class);
+        $logger = Server::get(LoggerInterface::class);
+        $dispatcher = Server::get(IEventDispatcher::class);
+        $config = Server::get(IConfig::class);
+        $calendarSharingBackend = Server::get(CalendarSharingBackend::class); //dla+
+        $l10nFactory = Server::get(IL10NFactory::class);
         $davL10n = $l10nFactory->get('dav');
-        $federatedCalendarFactory = \OC::$server->get(\OCA\DAV\CalDAV\Federation\FederatedCalendarFactory::class);
+        $federatedCalendarFactory = Server::get(FederatedCalendarFactory::class);
 
         $calDavBackend = new CalDavBackend(
             $db,
@@ -111,16 +136,21 @@ class Dav {
             $dispatcher,
             $config,
             $calendarSharingBackend,
-            \OC::$server->get(\OCA\DAV\CalDAV\Federation\FederatedCalendarMapper::class),
-            \OC::$server->get(\OCP\ICacheFactory::class),
+            Server::get(FederatedCalendarMapper::class),
+            Server::get(ICacheFactory::class),
 
             /* watcha! default: false
             true
             !watcha */
         );
 
-        $debugging = \OC::$server->getConfig()->getSystemValue('debug', false);
-        $sendInvitations = \OC::$server->getConfig()->getAppValue('dav', 'sendInvitations', 'yes') === 'yes';
+        $debugging = $config->getSystemValue('debug', false);
+        // watcha+
+        // `getAppValue()` went away with the other legacy getters; upstream reads this
+        // one through IAppConfig now, and its default flipped from the 'yes' string to
+        // a real boolean.
+        // +watcha
+        $sendInvitations = Server::get(IAppConfig::class)->getValueBool('dav', 'sendInvitations', true);
 
         // Root nodes
         $principalCollection = new \Sabre\CalDAV\Principal\Collection($principalBackend);
@@ -137,11 +167,11 @@ class Dav {
         // Fire up server
         $server = new \Sabre\DAV\Server($nodes);
         $server::$exposeVersion = false;
-        $server->httpRequest->setUrl(\OC::$server->getRequest()->getRequestUri());
+        $server->httpRequest->setUrl(Server::get(IRequest::class)->getRequestUri());
         $server->setBaseUri($baseuri);
 
         // Add plugins
-        $server->addPlugin(new MaintenancePlugin(\OC::$server->getConfig(), \OC::$server->getL10N('dav')));
+        $server->addPlugin(new MaintenancePlugin($config, $davL10n));
         $server->addPlugin(new \Sabre\DAV\Auth\Plugin($authBackend));
         $server->addPlugin(new \Sabre\CalDAV\Plugin());
 
@@ -155,13 +185,13 @@ class Dav {
             $server->addPlugin(new \Sabre\DAV\Browser\Plugin());
         }
 
-        $defaultCalendarValidator = \OC::$server->get(DefaultCalendarValidator::class);
+        $defaultCalendarValidator = Server::get(DefaultCalendarValidator::class);
         $server->addPlugin(new \Sabre\DAV\Sync\Plugin());
         $server->addPlugin(new \Sabre\CalDAV\ICSExportPlugin());
-        $server->addPlugin(new \OCA\DAV\CalDAV\Schedule\Plugin(\OC::$server->getConfig(), $logger, $defaultCalendarValidator));
+        $server->addPlugin(new \OCA\DAV\CalDAV\Schedule\Plugin($config, $logger, $defaultCalendarValidator));
 
         if ($sendInvitations) {
-            $server->addPlugin(\OC::$server->query(\OCA\DAV\CalDAV\Schedule\IMipPlugin::class));
+            $server->addPlugin(Server::get(IMipPlugin::class));
         }
         $server->addPlugin(new ExceptionLoggerPlugin('caldav', $logger));
         // </apps/dav/appinfo/v1/caldav.php>
@@ -174,7 +204,7 @@ class Dav {
                         $server->tree,
                         $connection,
                         $user,
-                        \OC::$server->get(PropertyMapper::class),
+                        Server::get(PropertyMapper::class),
                         $defaultCalendarValidator,
                     )
                 )

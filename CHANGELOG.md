@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.9.0
+
+Compatibilité Nextcloud 34. **Cette version ne fonctionne plus sur Nextcloud 33** :
+le socle qu'elle utilise n'existe plus que sous sa forme 34.
+
+### Fixed
+
+- Nextcloud 34 a supprimé les accesseurs `\OC::$server->getXxx()` — il ne reste que
+  `getL10N()`, `getUserFolder()` et `getWebRoot()`. Le connecteur en appelait vingt,
+  et les deux conséquences étaient silencieuses à la lecture mais franches à l'usage :
+
+  - `App::extendJsConfig()` plantait dans le hook `\OCP\Config`/`js`
+    (`Call to undefined method OC\Server::getConfig()`), donc `oc_appconfig.watcha`
+    n'atteignait plus la page. `refine-iframe.js` appelait alors
+    `postMessage(url, "")` — une `SyntaxError` dure — et **le panneau documents du
+    salon cessait de fonctionner**.
+  - `Dav::getServerInstance()` aurait échoué au premier appel, emportant avec lui
+    **toute création ou tout partage d'agenda**.
+
+  Les appels passent à `\OCP\Server::get()`, en calquant le
+  `apps/dav/appinfo/v1/caldav.php` de Nextcloud 34 dont ce bloc est une copie :
+  garder la copie diffable avec l'amont est ce qui rend la prochaine montée de
+  version lisible.
+
+- `getAppValue('dav', 'sendInvitations', 'yes')` devient
+  `IAppConfig::getValueBool('dav', 'sendInvitations', true)`, comme l'amont — le
+  défaut est passé de la chaîne `'yes'` à un vrai booléen.
+
+- `Dav::getServerInstance(IDBConnection $connection = null, IUser $user = null)`
+  devient `?IDBConnection` / `?IUser`. La dépréciation des paramètres implicitement
+  nullables encombrait déjà les logs en PHP 8.4 ; elle sera fatale en PHP 9.
+
+### Changed
+
+- Intervalle de compatibilité : `min-version="34.0"`, `max-version="34.0.4"`.
+
 ## 0.8.0
 
 ### Fixed

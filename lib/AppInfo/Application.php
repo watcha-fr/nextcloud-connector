@@ -31,11 +31,14 @@ use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\Security\CSP\AddContentSecurityPolicyEvent;
+use OCP\User\Events\UserChangedEvent;
 use OCP\User\Events\UserCreatedEvent;
+use OCP\User\Events\UserDeletedEvent;
 use OCP\Util;
 
 use OCA\Watcha\Listener\AddContentSecurityPolicyListener;
 use OCA\Watcha\Listener\UserCreatedListener;
+use OCA\Watcha\Listener\UserLifecycleListener;
 use OCA\Watcha\Middleware\SecurityMiddleware;
 
 /**
@@ -67,6 +70,10 @@ class Application extends App implements IBootstrap {
 		// d'identité : le listener s'enregistre toujours, mais ne fait rien
 		// tant que `watcha_registration_token` n'est pas configuré.
 		$context->registerEventListener(UserCreatedEvent::class, UserCreatedListener::class);
+		$context->registerEventListener(UserDeletedEvent::class, UserLifecycleListener::class);
+		// `UserChangedEvent` couvre bien des champs ; le listener ne retient
+		// que `enabled`, et Nextcloud ne l'émet que si l'état change vraiment.
+		$context->registerEventListener(UserChangedEvent::class, UserLifecycleListener::class);
     }
 
     /**

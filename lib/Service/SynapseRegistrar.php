@@ -40,6 +40,9 @@ class SynapseRegistrar {
     /** Le point d'entrée unique de provisionnement, côté Synapse. */
     private const REGISTER_PATH = "/_matrix/client/r0/watcha_register";
 
+    /** Celui par lequel on signale ce qui arrive à un compte ici. */
+    private const LIFECYCLE_PATH = "/_matrix/client/r0/watcha_nextcloud_user";
+
     public function __construct(
         private IClientService $clientService,
         private IConfig $config,
@@ -94,6 +97,43 @@ class SynapseRegistrar {
             "[watcha] compte Nextcloud déclaré à Synapse",
             [
                 "nextcloud_username" => $nextcloudUsername,
+                "status" => $response->getStatusCode(),
+            ]
+        );
+    }
+
+    /**
+     * Signale ce qui vient d'arriver au compte ici.
+     *
+     * `disable` et `enable` sont réversibles des deux côtés. `delete` ne l'est
+     * pas : Synapse supprime le compte Keycloak et efface le sien, ce qui
+     * court-circuite la rétention — la personne ne pourra plus revenir sous la
+     * même identité.
+     *
+     * @param string $action disable, enable ou delete
+     * @throws \Exception si Synapse refuse ou reste injoignable
+     */
+    public function notifyLifecycle(string $nextcloudUsername, string $action): void {
+        $response = $this->clientService->newClient()->post(
+            $this->getSynapseUrl() . self::LIFECYCLE_PATH,
+            [
+                "headers" => [
+                    "Authorization" => "Bearer " . $this->getToken(),
+                    "Content-Type" => "application/json",
+                ],
+                "body" => json_encode([
+                    "nextcloud_username" => $nextcloudUsername,
+                    "action" => $action,
+                ]),
+                "timeout" => 30,
+            ]
+        );
+
+        $this->logger->info(
+            "[watcha] cycle de vie du compte signalé à Synapse",
+            [
+                "nextcloud_username" => $nextcloudUsername,
+                "action" => $action,
                 "status" => $response->getStatusCode(),
             ]
         );

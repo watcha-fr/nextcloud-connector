@@ -43,6 +43,9 @@ class SynapseRegistrar {
     /** Celui par lequel on signale ce qui arrive à un compte ici. */
     private const LIFECYCLE_PATH = "/_matrix/client/r0/watcha_nextcloud_user";
 
+    /** Qui reprend le dossier d'un salon quand son propriétaire est supprimé. */
+    private const HEIR_PATH = "/_matrix/client/r0/watcha_room_folder_heir";
+
     public function __construct(
         private IClientService $clientService,
         private IConfig $config,
@@ -137,6 +140,47 @@ class SynapseRegistrar {
                 "status" => $response->getStatusCode(),
             ]
         );
+    }
+
+    /**
+     * Qui reprend le dossier d'un salon quand son propriétaire s'en va.
+     *
+     * Seul Synapse peut répondre : l'appartenance aux salons et l'ancienneté
+     * n'existent que chez lui. Une réponse nulle n'est pas un échec — elle dit
+     * qu'aucun membre ne peut hériter, et le dossier suivra le compte.
+     *
+     * @return string|null le nom Nextcloud de l'héritier, ou null s'il n'y en a pas
+     * @throws \Exception si Synapse refuse ou reste injoignable
+     */
+    public function findRoomFolderHeir(string $roomId, string $leavingUsername): ?string {
+        $response = $this->clientService->newClient()->post(
+            $this->getSynapseUrl() . self::HEIR_PATH,
+            [
+                "headers" => [
+                    "Authorization" => "Bearer " . $this->getToken(),
+                    "Content-Type" => "application/json",
+                ],
+                "body" => json_encode([
+                    "room_id" => $roomId,
+                    "nextcloud_username" => $leavingUsername,
+                ]),
+                "timeout" => 30,
+            ]
+        );
+
+        $body = json_decode($response->getBody(), true);
+        $heir = $body["nextcloud_username"] ?? null;
+
+        $this->logger->info(
+            "[watcha] héritier du dossier de salon désigné par Synapse",
+            [
+                "room_id" => $roomId,
+                "leaving" => $leavingUsername,
+                "heir" => $heir,
+            ]
+        );
+
+        return is_string($heir) && $heir !== "" ? $heir : null;
     }
 
     /**

@@ -29,7 +29,10 @@ use OCA\Watcha\Service\SynapseRegistrar;
 use OCP\BackgroundJob\IJobList;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
+use OCP\IUser;
+use OCP\IUserManager;
 use OCP\IUserSession;
+use OCP\User\Events\UserChangedEvent;
 use OCP\User\Events\UserCreatedEvent;
 use Psr\Log\LoggerInterface;
 
@@ -37,12 +40,20 @@ use Psr\Log\LoggerInterface;
  * Un compte créé dans Nextcloud doit exister dans Matrix et chez le
  * fournisseur d'identité.
  *
- * @template-implements IEventListener<UserCreatedEvent>
+ * On le déclare dès qu'il est complet, sans attendre le cron. « Complet » veut
+ * dire : porteur d'une adresse, puisque le fournisseur d'identité en exige une.
+ * Or Nextcloud crée le compte d'abord et pose l'adresse ensuite — quelques
+ * lignes plus loin dans `occ user:add`, quelques lignes plus loin dans la
+ * console. On écoute donc les deux moments, et le premier qui nous donne un
+ * compte complet l'emporte.
+ *
+ * @template-implements IEventListener<UserCreatedEvent|UserChangedEvent>
  */
 class UserCreatedListener implements IEventListener {
 
     public function __construct(
         private IJobList $jobList,
+        private IUserManager $userManager,
         private IUserSession $userSession,
         private SynapseRegistrar $registrar,
         private LoggerInterface $logger,
@@ -50,14 +61,26 @@ class UserCreatedListener implements IEventListener {
     }
 
     public function handle(Event $event): void {
-        if (!$event instanceof UserCreatedEvent) {
-            return;
-        }
-
         if (!$this->registrar->isConfigured()) {
             return;
         }
 
+        if ($event instanceof UserCreatedEvent) {
+            $user = $this->userManager->get($event->getUid());
+            if ($user !== null) {
+                $this->declare($user);
+            }
+            return;
+        }
+
+        // L'adresse arrive après la création : c'est elle qui rend le compte
+        // déclarable, et c'est donc souvent ici que tout se joue.
+        if ($event instanceof UserChangedEvent && $event->getFeature() === "eMailAddress") {
+            $this->declare($event->getUser());
+        }
+    }
+
+    private function declare(IUser $user): void {
         if ($this->wasCreatedByWatcha()) {
             // Synapse vient de créer ce compte : le lui redéclarer bouclerait,
             // avec un second courriel de bienvenue et une ligne d'audit en
@@ -65,14 +88,36 @@ class UserCreatedListener implements IEventListener {
             return;
         }
 
-        // Différé : l'adresse et le nom d'affichage ne sont pas encore posés à
-        // cet instant, cf. RegisterUserJob.
-        $this->jobList->add(RegisterUserJob::class, ["uid" => $event->getUid()]);
+        if ($this->registrar->isDeclared($user->getUID())) {
+            return;
+        }
 
-        $this->logger->info(
-            "[watcha] compte Nextcloud à déclarer à Synapse",
-            ["uid" => $event->getUid()]
-        );
+        $email = $user->getSystemEMailAddress() ?: $user->getEMailAddress();
+        if (!$email) {
+            // Le compte n'est pas encore déclarable. On ne met rien en file et
+            // on ne renonce pas : l'arrivée de l'adresse nous rappellera. Un
+            // compte qui n'en recevrait jamais reste local à Nextcloud, ce qui
+            // est le seul état correct sans identité à créer.
+            return;
+        }
+
+        try {
+            $this->registrar->registerUser(
+                $user->getUID(),
+                $email,
+                $user->getDisplayName()
+            );
+            $this->registrar->markDeclared($user->getUID());
+        } catch (\Throwable $e) {
+            $this->logger->warning(
+                "[watcha] Synapse injoignable, compte remis en file",
+                ["uid" => $user->getUID(), "exception" => $e]
+            );
+            $this->jobList->add(
+                RegisterUserJob::class,
+                ["uid" => $user->getUID()]
+            );
+        }
     }
 
     /**

@@ -78,9 +78,14 @@ class Application extends App implements IBootstrap {
 		// disparaître pour tous les membres. Le listener transmet, ou lève — et
 		// lever ici laisse le compte entier, la suppression n'ayant pas commencé.
 		$context->registerEventListener(BeforeUserDeletedEvent::class, RoomFolderInheritanceListener::class);
-		// `UserChangedEvent` couvre bien des champs ; le listener ne retient
-		// que `enabled`, et Nextcloud ne l'émet que si l'état change vraiment.
+		// `UserChangedEvent` couvre bien des champs, et deux listeners s'y
+		// accrochent sur des champs distincts : `enabled` pour le cycle de vie,
+		// `eMailAddress` pour la déclaration. Nextcloud ne l'émet que si la
+		// valeur change vraiment.
 		$context->registerEventListener(UserChangedEvent::class, UserLifecycleListener::class);
+		// L'adresse arrive après la création du compte : c'est elle qui le rend
+		// déclarable, et l'attendre ici évite les cinq minutes du cron.
+		$context->registerEventListener(UserChangedEvent::class, UserCreatedListener::class);
     }
 
     /**

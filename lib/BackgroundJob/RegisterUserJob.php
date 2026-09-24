@@ -26,6 +26,7 @@ namespace OCA\Watcha\BackgroundJob;
 
 use OCA\Watcha\Service\SynapseRegistrar;
 use OCP\AppFramework\Utility\ITimeFactory;
+use OCP\BackgroundJob\IJobList;
 use OCP\BackgroundJob\QueuedJob;
 use OCP\IUserManager;
 use Psr\Log\LoggerInterface;
@@ -46,6 +47,7 @@ class RegisterUserJob extends QueuedJob {
         ITimeFactory $time,
         private IUserManager $userManager,
         private SynapseRegistrar $registrar,
+        private IJobList $jobList,
         private LoggerInterface $logger,
     ) {
         parent::__construct($time);
@@ -70,10 +72,17 @@ class RegisterUserJob extends QueuedJob {
             return;
         }
 
+        if ($this->registrar->isDeclared($uid)) {
+            // L'écouteur a déclaré le compte sans attendre ce travail, qui
+            // n'existe plus que comme repli.
+            return;
+        }
+
         $email = $user->getSystemEMailAddress() ?: $user->getEMailAddress();
         if (!$email) {
             // Keycloak a besoin d'une adresse. Sans elle, le compte reste
-            // local à Nextcloud, et le dire vaut mieux que le taire.
+            // local à Nextcloud, et le dire vaut mieux que le taire. Rien à
+            // reprendre : c'est l'arrivée de l'adresse qui déclarera le compte.
             $this->logger->warning(
                 "[watcha] compte sans adresse : rien n'a été déclaré à Synapse",
                 ["uid" => $uid]
@@ -83,13 +92,17 @@ class RegisterUserJob extends QueuedJob {
 
         try {
             $this->registrar->registerUser($uid, $email, $user->getDisplayName());
+            $this->registrar->markDeclared($uid);
         } catch (\Throwable $e) {
             // Le compte Nextcloud existe déjà ; le relancer plus tard est sans
-            // danger, `watcha_register` étant idempotent.
+            // danger, `watcha_register` étant idempotent. On remet donc le
+            // travail en file — `QueuedJob` étant à usage unique, ne rien faire
+            // ici le perdait, et le compte restait orphelin en silence.
             $this->logger->error(
-                "[watcha] échec de la déclaration du compte à Synapse",
+                "[watcha] échec de la déclaration du compte à Synapse, remis en file",
                 ["uid" => $uid, "exception" => $e]
             );
+            $this->jobList->add(self::class, ["uid" => $uid]);
         }
     }
 }

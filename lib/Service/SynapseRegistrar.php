@@ -37,6 +37,9 @@ use Psr\Log\LoggerInterface;
  */
 class SynapseRegistrar {
 
+    /** L'identifiant de l'application, sous lequel se rangent ses valeurs. */
+    private const APP_ID = "watcha";
+
     /** Le point d'entrée unique de provisionnement, côté Synapse. */
     private const REGISTER_PATH = "/_matrix/client/r0/watcha_register";
 
@@ -66,6 +69,20 @@ class SynapseRegistrar {
      */
     public function getServiceAccount(): string {
         return $this->config->getSystemValue("watcha_service_account", "watcha");
+    }
+
+    /**
+     * Un compte se déclare une fois. Deux moments peuvent nous y amener — sa
+     * création et l'arrivée de son adresse — et son adresse peut changer plus
+     * tard : sans cette marque, la même personne serait annoncée deux fois à
+     * Synapse, avec un second courriel de bienvenue à la clé.
+     */
+    public function isDeclared(string $uid): bool {
+        return $this->config->getUserValue($uid, self::APP_ID, "declared", "no") === "yes";
+    }
+
+    public function markDeclared(string $uid): void {
+        $this->config->setUserValue($uid, self::APP_ID, "declared", "yes");
     }
 
     /**

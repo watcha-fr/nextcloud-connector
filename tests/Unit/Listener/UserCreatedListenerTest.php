@@ -9,6 +9,7 @@ use OCA\Watcha\Listener\UserCreatedListener;
 use OCA\Watcha\Service\SynapseRegistrar;
 use OCP\BackgroundJob\IJobList;
 use OCP\EventDispatcher\Event;
+use OCP\IGroupManager;
 use OCP\IUser;
 use OCP\IUserManager;
 use OCP\IUserSession;
@@ -22,6 +23,7 @@ class UserCreatedListenerTest extends TestCase {
     private const SERVICE_ACCOUNT = "watcha";
 
     private $jobList;
+    private $groupManager;
     private $userManager;
     private $userSession;
     private $registrar;
@@ -31,6 +33,7 @@ class UserCreatedListenerTest extends TestCase {
         parent::setUp();
 
         $this->jobList = $this->createMock(IJobList::class);
+        $this->groupManager = $this->createMock(IGroupManager::class);
         $this->userManager = $this->createMock(IUserManager::class);
         $this->userSession = $this->createMock(IUserSession::class);
         $this->registrar = $this->createMock(SynapseRegistrar::class);
@@ -39,11 +42,16 @@ class UserCreatedListenerTest extends TestCase {
 
         $this->listener = new UserCreatedListener(
             $this->jobList,
+            $this->groupManager,
             $this->userManager,
             $this->userSession,
             $this->registrar,
             $this->createMock(LoggerInterface::class)
         );
+    }
+
+    private function inPartnerGroup(bool $yes): void {
+        $this->groupManager->method("isInGroup")->willReturn($yes);
     }
 
     private function user(string $uid = "jdupont", ?string $email = "jdupont@example.org"): IUser {
@@ -78,12 +86,29 @@ class UserCreatedListenerTest extends TestCase {
     public function testACompleteAccountIsDeclaredAtOnce(): void {
         $this->registrar->method("isConfigured")->willReturn(true);
         $this->actingAs("admin");
+        $this->inPartnerGroup(false);
 
         $this->registrar->expects($this->once())
             ->method("registerUser")
-            ->with("jdupont", "jdupont@example.org", "Jean Dupont");
+            ->with("jdupont", "jdupont@example.org", "Jean Dupont", false);
         $this->registrar->expects($this->once())->method("markDeclared")->with("jdupont");
         $this->jobList->expects($this->never())->method("add");
+
+        $this->listener->handle($this->creation($this->user()));
+    }
+
+    /**
+     * Le groupe Nextcloud dit le statut : créé dans `partner`, le compte doit
+     * être partenaire dans Matrix aussi.
+     */
+    public function testAnAccountInThePartnerGroupIsDeclaredAsAPartner(): void {
+        $this->registrar->method("isConfigured")->willReturn(true);
+        $this->actingAs("admin");
+        $this->inPartnerGroup(true);
+
+        $this->registrar->expects($this->once())
+            ->method("registerUser")
+            ->with("jdupont", "jdupont@example.org", "Jean Dupont", true);
 
         $this->listener->handle($this->creation($this->user()));
     }
@@ -108,9 +133,11 @@ class UserCreatedListenerTest extends TestCase {
         $this->registrar->method("isConfigured")->willReturn(true);
         $this->actingAs("admin");
 
+        $this->inPartnerGroup(false);
+
         $this->registrar->expects($this->once())
             ->method("registerUser")
-            ->with("jdupont", "jdupont@example.org", "Jean Dupont");
+            ->with("jdupont", "jdupont@example.org", "Jean Dupont", false);
 
         $this->listener->handle(
             new UserChangedEvent($this->user(), "eMailAddress", "jdupont@example.org", "")
@@ -150,6 +177,7 @@ class UserCreatedListenerTest extends TestCase {
     public function testAnUnreachableSynapseFallsBackToTheQueue(): void {
         $this->registrar->method("isConfigured")->willReturn(true);
         $this->actingAs("admin");
+        $this->inPartnerGroup(false);
         $this->registrar->method("registerUser")
             ->willThrowException(new \RuntimeException("connexion refusée"));
 
@@ -183,6 +211,7 @@ class UserCreatedListenerTest extends TestCase {
     public function testAnAccountCreatedWithoutASessionIsDeclared(): void {
         $this->registrar->method("isConfigured")->willReturn(true);
         $this->actingAs(null);
+        $this->inPartnerGroup(false);
 
         $this->registrar->expects($this->once())->method("registerUser");
 

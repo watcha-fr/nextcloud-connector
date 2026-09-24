@@ -40,6 +40,13 @@ class SynapseRegistrar {
     /** L'identifiant de l'application, sous lequel se rangent ses valeurs. */
     private const APP_ID = "watcha";
 
+    /**
+     * Le groupe Nextcloud qui marque une personne extérieure à l'organisation.
+     * C'est celui que Synapse pose lui-même en provisionnant un partenaire ;
+     * le renseigner à la création d'un compte ici produit le même statut.
+     */
+    public const PARTNER_GROUP = "partner";
+
     /** Le point d'entrée unique de provisionnement, côté Synapse. */
     private const REGISTER_PATH = "/_matrix/client/r0/watcha_register";
 
@@ -96,6 +103,7 @@ class SynapseRegistrar {
         string $nextcloudUsername,
         string $email,
         ?string $displayName,
+        bool $isPartner = false,
     ): void {
         $response = $this->clientService->newClient()->post(
             $this->getSynapseUrl() . self::REGISTER_PATH,
@@ -108,6 +116,10 @@ class SynapseRegistrar {
                     "email" => $email,
                     "displayname" => $displayName ?? "",
                     "nextcloud_username" => $nextcloudUsername,
+                    // Le groupe Nextcloud dit le statut. C'est le même que
+                    // Synapse pose lui-même quand il provisionne un partenaire,
+                    // et on le lui rend ici dans l'autre sens.
+                    "is_partner" => $isPartner,
                 ]),
                 "timeout" => 30,
             ]
@@ -117,6 +129,7 @@ class SynapseRegistrar {
             "[watcha] compte Nextcloud déclaré à Synapse",
             [
                 "nextcloud_username" => $nextcloudUsername,
+                "is_partner" => $isPartner,
                 "status" => $response->getStatusCode(),
             ]
         );

@@ -28,6 +28,7 @@ use OCA\Watcha\Service\SynapseRegistrar;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\IJobList;
 use OCP\BackgroundJob\QueuedJob;
+use OCP\IGroupManager;
 use OCP\IUserManager;
 use Psr\Log\LoggerInterface;
 
@@ -45,6 +46,7 @@ class RegisterUserJob extends QueuedJob {
 
     public function __construct(
         ITimeFactory $time,
+        private IGroupManager $groupManager,
         private IUserManager $userManager,
         private SynapseRegistrar $registrar,
         private IJobList $jobList,
@@ -91,7 +93,12 @@ class RegisterUserJob extends QueuedJob {
         }
 
         try {
-            $this->registrar->registerUser($uid, $email, $user->getDisplayName());
+            $this->registrar->registerUser(
+                $uid,
+                $email,
+                $user->getDisplayName(),
+                $this->groupManager->isInGroup($uid, SynapseRegistrar::PARTNER_GROUP)
+            );
             $this->registrar->markDeclared($uid);
         } catch (\Throwable $e) {
             // Le compte Nextcloud existe déjà ; le relancer plus tard est sans

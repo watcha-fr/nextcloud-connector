@@ -29,6 +29,7 @@ use OCA\Watcha\Service\SynapseRegistrar;
 use OCP\BackgroundJob\IJobList;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
+use OCP\IGroupManager;
 use OCP\IUser;
 use OCP\IUserManager;
 use OCP\IUserSession;
@@ -53,6 +54,7 @@ class UserCreatedListener implements IEventListener {
 
     public function __construct(
         private IJobList $jobList,
+        private IGroupManager $groupManager,
         private IUserManager $userManager,
         private IUserSession $userSession,
         private SynapseRegistrar $registrar,
@@ -105,7 +107,8 @@ class UserCreatedListener implements IEventListener {
             $this->registrar->registerUser(
                 $user->getUID(),
                 $email,
-                $user->getDisplayName()
+                $user->getDisplayName(),
+                $this->isPartner($user)
             );
             $this->registrar->markDeclared($user->getUID());
         } catch (\Throwable $e) {
@@ -118,6 +121,23 @@ class UserCreatedListener implements IEventListener {
                 ["uid" => $user->getUID()]
             );
         }
+    }
+
+    /**
+     * Le groupe dit le statut. Nextcloud ajoute aux groupes avant de poser
+     * l'adresse — dans `occ user:add` comme dans la console — et c'est
+     * l'adresse qui déclenche la déclaration : le groupe est donc connu quand
+     * on arrive ici.
+     *
+     * ⚠️ Cela ne vaut qu'à la création. Synapse n'écrit le statut qu'une fois
+     * et ne le resynchronise jamais : ajouter quelqu'un au groupe plus tard ne
+     * le rendra pas partenaire dans Matrix.
+     */
+    private function isPartner(IUser $user): bool {
+        return $this->groupManager->isInGroup(
+            $user->getUID(),
+            SynapseRegistrar::PARTNER_GROUP
+        );
     }
 
     /**

@@ -78,13 +78,26 @@ class UserLifecycleListener implements IEventListener {
             return;
         }
 
+        // On appelle Synapse tout de suite. Contrairement à la création, le
+        // compte est ici complet : il n'y a rien à attendre. Différer coûtait
+        // jusqu'à cinq minutes — le temps du prochain passage du cron — pendant
+        // lesquelles une personne désactivée dans Nextcloud gardait la
+        // messagerie ouverte, et l'administrateur qui vérifiait aussitôt
+        // concluait que la synchronisation ne marchait pas.
+        try {
+            $this->registrar->notifyLifecycle($uid, $action);
+            return;
+        } catch (\Throwable $e) {
+            $this->logger->warning(
+                "[watcha] Synapse injoignable, cycle de vie du compte remis en file",
+                ["uid" => $uid, "action" => $action, "exception" => $e]
+            );
+        }
+
+        // Le repli garde sa raison d'être : si Synapse ne répond pas, le geste
+        // doit survivre à la panne plutôt que de se perdre.
         $this->jobList->add(
             SyncLifecycleJob::class,
-            ["uid" => $uid, "action" => $action]
-        );
-
-        $this->logger->info(
-            "[watcha] cycle de vie du compte à signaler à Synapse",
             ["uid" => $uid, "action" => $action]
         );
     }

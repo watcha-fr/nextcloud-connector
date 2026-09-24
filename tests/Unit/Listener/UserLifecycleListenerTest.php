@@ -60,9 +60,10 @@ class UserLifecycleListenerTest extends TestCase {
     public function testDeletionAsksForTheHardPath(): void {
         $this->actingAs("admin");
 
-        $this->jobList->expects($this->once())
-            ->method("add")
-            ->with(SyncLifecycleJob::class, ["uid" => "jdupont", "action" => "delete"]);
+        $this->registrar->expects($this->once())
+            ->method("notifyLifecycle")
+            ->with("jdupont", "delete");
+        $this->jobList->expects($this->never())->method("add");
 
         $this->listener->handle(new UserDeletedEvent($this->user()));
     }
@@ -70,9 +71,10 @@ class UserLifecycleListenerTest extends TestCase {
     public function testDisablingAsksForTheReversiblePath(): void {
         $this->actingAs("admin");
 
-        $this->jobList->expects($this->once())
-            ->method("add")
-            ->with(SyncLifecycleJob::class, ["uid" => "jdupont", "action" => "disable"]);
+        $this->registrar->expects($this->once())
+            ->method("notifyLifecycle")
+            ->with("jdupont", "disable");
+        $this->jobList->expects($this->never())->method("add");
 
         $this->listener->handle(
             new UserChangedEvent($this->user(), "enabled", false, true)
@@ -82,12 +84,32 @@ class UserLifecycleListenerTest extends TestCase {
     public function testEnablingBringsTheAccountBack(): void {
         $this->actingAs("admin");
 
-        $this->jobList->expects($this->once())
-            ->method("add")
-            ->with(SyncLifecycleJob::class, ["uid" => "jdupont", "action" => "enable"]);
+        $this->registrar->expects($this->once())
+            ->method("notifyLifecycle")
+            ->with("jdupont", "enable");
+        $this->jobList->expects($this->never())->method("add");
 
         $this->listener->handle(
             new UserChangedEvent($this->user(), "enabled", true, false)
+        );
+    }
+
+    /**
+     * Le geste est porté tout de suite, mais il ne doit pas se perdre si
+     * Synapse ne répond pas : la file reprend le relais.
+     */
+    public function testAnUnreachableSynapseFallsBackToTheQueue(): void {
+        $this->actingAs("admin");
+
+        $this->registrar->method("notifyLifecycle")
+            ->willThrowException(new \RuntimeException("connexion refusée"));
+
+        $this->jobList->expects($this->once())
+            ->method("add")
+            ->with(SyncLifecycleJob::class, ["uid" => "jdupont", "action" => "disable"]);
+
+        $this->listener->handle(
+            new UserChangedEvent($this->user(), "enabled", false, true)
         );
     }
 

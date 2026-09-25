@@ -31,6 +31,7 @@ use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
 use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\Security\CSP\AddContentSecurityPolicyEvent;
+use OCP\Share\Events\BeforeShareCreatedEvent;
 use OCP\User\Events\BeforeUserDeletedEvent;
 use OCP\User\Events\UserChangedEvent;
 use OCP\User\Events\UserCreatedEvent;
@@ -38,6 +39,7 @@ use OCP\User\Events\UserDeletedEvent;
 use OCP\Util;
 
 use OCA\Watcha\Listener\AddContentSecurityPolicyListener;
+use OCA\Watcha\Listener\EmailShareListener;
 use OCA\Watcha\Listener\RoomFolderInheritanceListener;
 use OCA\Watcha\Listener\UserCreatedListener;
 use OCA\Watcha\Listener\UserLifecycleListener;
@@ -86,6 +88,11 @@ class Application extends App implements IBootstrap {
 		// L'adresse arrive après la création du compte : c'est elle qui le rend
 		// déclarable, et l'attendre ici évite les cinq minutes du cron.
 		$context->registerEventListener(UserChangedEvent::class, UserCreatedListener::class);
+		// Partager un fichier à une adresse inconnue crée la personne, au lieu
+		// de fabriquer un lien à jeton vers quelqu'un qui n'existe nulle part.
+		// Sur `BeforeShareCreatedEvent` et pas après : le type du partage y est
+		// encore modifiable, et un échec n'y laisse rien derrière lui.
+		$context->registerEventListener(BeforeShareCreatedEvent::class, EmailShareListener::class);
     }
 
     /**

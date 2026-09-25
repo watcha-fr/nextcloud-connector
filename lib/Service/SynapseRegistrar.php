@@ -99,13 +99,22 @@ class SynapseRegistrar {
      *
      * @throws \Exception si Synapse refuse ou reste injoignable
      */
+    /**
+     * @param string|null $nextcloudUsername le nom à imposer, ou null pour
+     *        laisser Synapse le dériver de l'adresse — c'est le cas du partage
+     *        de fichier, où aucun compte n'existe encore ici.
+     * @param string|null $inviterUsername qui invite, pour que le courriel de
+     *        bienvenue porte son nom plutôt que celui du compte de service.
+     * @return string le nom Nextcloud du compte, tel que Synapse l'a retenu.
+     */
     public function registerUser(
-        string $nextcloudUsername,
+        ?string $nextcloudUsername,
         string $email,
         ?string $displayName,
         bool $isPartner = false,
         bool $isAdmin = false,
-    ): void {
+        ?string $inviterUsername = null,
+    ): string {
         $response = $this->clientService->newClient()->post(
             $this->getSynapseUrl() . self::REGISTER_PATH,
             [
@@ -126,20 +135,34 @@ class SynapseRegistrar {
                     // geste part de la console d'administration. Le champ porte
                     // le nom qu'attend `watcha_register`, qui lit `admin`.
                     "admin" => $isAdmin,
+                    // Synapse le résout en identifiant Matrix pour signer le
+                    // courriel de bienvenue. Absent, le message vient du compte
+                    // de service.
+                    "inviter_nextcloud_username" => $inviterUsername,
                 ]),
                 "timeout" => 30,
             ]
         );
 
+        $body = json_decode((string)$response->getBody(), true);
+        // Synapse fait foi : quand on ne lui impose pas de nom, il le dérive de
+        // l'adresse et le déduplique. Le repli ne sert que si une version plus
+        // ancienne du serveur ne renvoie pas encore le champ.
+        $retenu = $body["nextcloud_username"] ?? $nextcloudUsername ?? "";
+
         $this->logger->info(
             "[watcha] compte Nextcloud déclaré à Synapse",
             [
-                "nextcloud_username" => $nextcloudUsername,
+                "nextcloud_username" => $retenu,
+                "impose" => $nextcloudUsername !== null,
                 "is_partner" => $isPartner,
                 "is_admin" => $isAdmin,
+                "invite_par" => $inviterUsername,
                 "status" => $response->getStatusCode(),
             ]
         );
+
+        return $retenu;
     }
 
     /**

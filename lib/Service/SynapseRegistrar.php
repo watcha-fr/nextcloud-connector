@@ -104,6 +104,7 @@ class SynapseRegistrar {
         string $email,
         ?string $displayName,
         bool $isPartner = false,
+        bool $isAdmin = false,
     ): void {
         $response = $this->clientService->newClient()->post(
             $this->getSynapseUrl() . self::REGISTER_PATH,
@@ -120,6 +121,11 @@ class SynapseRegistrar {
                     // Synapse pose lui-même quand il provisionne un partenaire,
                     // et on le lui rend ici dans l'autre sens.
                     "is_partner" => $isPartner,
+                    // Idem pour l'administration : un compte créé administrateur
+                    // ici doit l'être dans les trois systèmes, comme lorsque le
+                    // geste part de la console d'administration. Le champ porte
+                    // le nom qu'attend `watcha_register`, qui lit `admin`.
+                    "admin" => $isAdmin,
                 ]),
                 "timeout" => 30,
             ]
@@ -130,6 +136,7 @@ class SynapseRegistrar {
             [
                 "nextcloud_username" => $nextcloudUsername,
                 "is_partner" => $isPartner,
+                "is_admin" => $isAdmin,
                 "status" => $response->getStatusCode(),
             ]
         );

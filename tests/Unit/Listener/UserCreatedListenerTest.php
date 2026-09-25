@@ -50,8 +50,21 @@ class UserCreatedListenerTest extends TestCase {
         );
     }
 
+    /**
+     * Bouchonner les deux questions, toujours. Un mock dont `isAdmin()` n'est
+     * pas configuré renvoie `null` là où le code attend un `bool` : la
+     * TypeError qui s'ensuit est rattrapée par le `catch (\Throwable)` du
+     * listener, et le test part alors dans la branche de repli en file sans
+     * rien dire de la vraie cause.
+     */
     private function inPartnerGroup(bool $yes): void {
         $this->groupManager->method("isInGroup")->willReturn($yes);
+        $this->groupManager->method("isAdmin")->willReturn(false);
+    }
+
+    private function asAdmin(): void {
+        $this->groupManager->method("isInGroup")->willReturn(false);
+        $this->groupManager->method("isAdmin")->willReturn(true);
     }
 
     private function user(string $uid = "jdupont", ?string $email = "jdupont@example.org"): IUser {
@@ -90,7 +103,7 @@ class UserCreatedListenerTest extends TestCase {
 
         $this->registrar->expects($this->once())
             ->method("registerUser")
-            ->with("jdupont", "jdupont@example.org", "Jean Dupont", false);
+            ->with("jdupont", "jdupont@example.org", "Jean Dupont", false, false);
         $this->registrar->expects($this->once())->method("markDeclared")->with("jdupont");
         $this->jobList->expects($this->never())->method("add");
 
@@ -108,7 +121,24 @@ class UserCreatedListenerTest extends TestCase {
 
         $this->registrar->expects($this->once())
             ->method("registerUser")
-            ->with("jdupont", "jdupont@example.org", "Jean Dupont", true);
+            ->with("jdupont", "jdupont@example.org", "Jean Dupont", true, false);
+
+        $this->listener->handle($this->creation($this->user()));
+    }
+
+    /**
+     * Un compte créé administrateur ici doit l'être dans les trois systèmes.
+     * Sans cela il n'était administrateur que de son espace documentaire, et
+     * membre ordinaire dans la messagerie et dans l'annuaire.
+     */
+    public function testAnAdminAccountIsDeclaredAsAnAdmin(): void {
+        $this->registrar->method("isConfigured")->willReturn(true);
+        $this->actingAs("admin");
+        $this->asAdmin();
+
+        $this->registrar->expects($this->once())
+            ->method("registerUser")
+            ->with("jdupont", "jdupont@example.org", "Jean Dupont", false, true);
 
         $this->listener->handle($this->creation($this->user()));
     }
@@ -137,7 +167,7 @@ class UserCreatedListenerTest extends TestCase {
 
         $this->registrar->expects($this->once())
             ->method("registerUser")
-            ->with("jdupont", "jdupont@example.org", "Jean Dupont", false);
+            ->with("jdupont", "jdupont@example.org", "Jean Dupont", false, false);
 
         $this->listener->handle(
             new UserChangedEvent($this->user(), "eMailAddress", "jdupont@example.org", "")

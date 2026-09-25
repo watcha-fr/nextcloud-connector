@@ -108,7 +108,8 @@ class UserCreatedListener implements IEventListener {
                 $user->getUID(),
                 $email,
                 $user->getDisplayName(),
-                $this->isPartner($user)
+                $this->isPartner($user),
+                $this->isAdmin($user)
             );
             $this->registrar->markDeclared($user->getUID());
         } catch (\Throwable $e) {
@@ -138,6 +139,24 @@ class UserCreatedListener implements IEventListener {
             $user->getUID(),
             SynapseRegistrar::PARTNER_GROUP
         );
+    }
+
+    /**
+     * Un compte créé administrateur ici doit l'être dans les trois systèmes,
+     * comme lorsque le geste part de la console d'administration. Sans cela il
+     * n'était administrateur que de son espace documentaire, et membre
+     * ordinaire dans la messagerie et l'annuaire.
+     *
+     * `isAdmin()` plutôt que le groupe `admin` nommé en dur : c'est l'API que
+     * Nextcloud expose pour cette question, et elle vaut quelle que soit la
+     * façon dont l'installation range ses administrateurs.
+     *
+     * ⚠️ Même limite que pour le statut partenaire : cela ne vaut qu'à la
+     * création. Promouvoir quelqu'un plus tard ne le rendra pas administrateur
+     * dans Matrix — Synapse n'écrit ce statut qu'une fois.
+     */
+    private function isAdmin(IUser $user): bool {
+        return $this->groupManager->isAdmin($user->getUID());
     }
 
     /**

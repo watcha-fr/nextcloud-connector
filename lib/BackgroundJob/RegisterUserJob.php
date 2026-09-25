@@ -97,7 +97,8 @@ class RegisterUserJob extends QueuedJob {
                 $uid,
                 $email,
                 $user->getDisplayName(),
-                $this->groupManager->isInGroup($uid, SynapseRegistrar::PARTNER_GROUP)
+                $this->groupManager->isInGroup($uid, SynapseRegistrar::PARTNER_GROUP),
+                $this->groupManager->isAdmin($uid)
             );
             $this->registrar->markDeclared($uid);
         } catch (\Throwable $e) {
